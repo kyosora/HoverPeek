@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/HoverPeek.App/HoverPeek.App.csproj" />
+    <Project Path="src/HoverPeek.Core/HoverPeek.Core.csproj" />
+    <Project Path="src/HoverPeek.UI/HoverPeek.UI.csproj" />
+  </Folder>
+</Solution>

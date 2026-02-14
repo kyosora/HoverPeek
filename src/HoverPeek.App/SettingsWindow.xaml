@@ -1,0 +1,153 @@
+<Window x:Class="HoverPeek.App.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="HoverPeek 設定"
+        Width="600"
+        Height="500"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TabControl Grid.Row="0">
+            <!-- 懸停行為 -->
+            <TabItem Header="懸停行為">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <TextBlock Text="懸停延遲（毫秒）" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="HoverDelayTextBox" Width="150" HorizontalAlignment="Left" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="抖動容忍度（像素）" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="JitterToleranceTextBox" Width="150" HorizontalAlignment="Left" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="自動關閉延遲（毫秒）" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="AutoCloseDelayTextBox" Width="150" HorizontalAlignment="Left" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="說明：" FontSize="11" Foreground="#666" Margin="0,8,0,4"/>
+                        <TextBlock Text="• 懸停延遲：滑鼠停留多久後顯示預覽" FontSize="11" Foreground="#666"/>
+                        <TextBlock Text="• 抖動容忍度：滑鼠輕微移動不會中斷計時" FontSize="11" Foreground="#666"/>
+                        <TextBlock Text="• 自動關閉延遲：滑鼠離開檔案後多久關閉預覽" FontSize="11" Foreground="#666"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 預覽視窗 -->
+            <TabItem Header="預覽視窗">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <TextBlock Text="視窗寬度（像素）" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="WindowWidthTextBox" Width="150" HorizontalAlignment="Left" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="視窗高度（像素）" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="WindowHeightTextBox" Width="150" HorizontalAlignment="Left" Margin="0,0,0,16"/>
+
+                        <CheckBox x:Name="CenterWindowCheckBox" Content="固定在螢幕中央（否則跟隨滑鼠）" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="淡入動畫時間（毫秒）" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="FadeInDurationTextBox" Width="150" HorizontalAlignment="Left" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="淡出動畫時間（毫秒）" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="FadeOutDurationTextBox" Width="150" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 圖片預覽 -->
+            <TabItem Header="圖片預覽">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <TextBlock Text="最大預覽尺寸（像素）" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="ImageMaxDimensionTextBox" Width="150" HorizontalAlignment="Left" Margin="0,0,0,16"/>
+
+                        <CheckBox x:Name="EnableGifAnimationCheckBox" Content="播放 GIF 動畫" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="說明：" FontSize="11" Foreground="#666" Margin="0,8,0,4"/>
+                        <TextBlock Text="• 大圖片會自動縮放到此尺寸以內" FontSize="11" Foreground="#666"/>
+                        <TextBlock Text="• 取消勾選 GIF 動畫可顯示第一幀靜態圖" FontSize="11" Foreground="#666"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 文字預覽 -->
+            <TabItem Header="文字預覽">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <TextBlock Text="最大檔案大小（MB）" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="TextMaxFileSizeTextBox" Width="150" HorizontalAlignment="Left" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="最大顯示行數" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="TextMaxLinesTextBox" Width="150" HorizontalAlignment="Left" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="字型大小" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="TextFontSizeTextBox" Width="150" HorizontalAlignment="Left" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="字型家族" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <ComboBox x:Name="TextFontFamilyComboBox" Width="200" HorizontalAlignment="Left" Margin="0,0,0,16">
+                            <ComboBoxItem Content="Consolas"/>
+                            <ComboBoxItem Content="Courier New"/>
+                            <ComboBoxItem Content="Cascadia Code"/>
+                            <ComboBoxItem Content="JetBrains Mono"/>
+                            <ComboBoxItem Content="Fira Code"/>
+                        </ComboBox>
+
+                        <CheckBox x:Name="EnableMarkdownRenderingCheckBox" Content="啟用 Markdown 渲染" Margin="0,0,0,8"/>
+                        <CheckBox x:Name="EnableSyntaxHighlightingCheckBox" Content="啟用語法高亮" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="說明：" FontSize="11" Foreground="#666" Margin="0,8,0,4"/>
+                        <TextBlock Text="• Markdown 渲染會將 .md 檔案顯示為格式化的網頁" FontSize="11" Foreground="#666"/>
+                        <TextBlock Text="• 語法高亮會為程式碼檔案加上顏色標記" FontSize="11" Foreground="#666"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 影片預覽 -->
+            <TabItem Header="影片預覽">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <CheckBox x:Name="VideoAutoPlayCheckBox" Content="自動播放影片" Margin="0,0,0,8"/>
+                        <CheckBox x:Name="VideoMutedCheckBox" Content="靜音播放" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="說明：" FontSize="11" Foreground="#666" Margin="0,8,0,4"/>
+                        <TextBlock Text="• 取消自動播放可顯示影片縮圖" FontSize="11" Foreground="#666"/>
+                        <TextBlock Text="• 建議保持靜音以避免干擾" FontSize="11" Foreground="#666"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 壓縮檔預覽 -->
+            <TabItem Header="壓縮檔預覽">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <CheckBox x:Name="ArchiveAutoExpandCheckBox" Content="自動展開檔案列表" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="說明：" FontSize="11" Foreground="#666" Margin="0,8,0,4"/>
+                        <TextBlock Text="• 自動展開會在預覽時直接顯示壓縮檔內容" FontSize="11" Foreground="#666"/>
+                        <TextBlock Text="• 取消勾選可手動點擊「展開檔案列表」按鈕" FontSize="11" Foreground="#666"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 啟動設定 -->
+            <TabItem Header="啟動設定">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <CheckBox x:Name="StartWithWindowsCheckBox" Content="開機時自動啟動" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="說明：" FontSize="11" Foreground="#666" Margin="0,8,0,4"/>
+                        <TextBlock Text="• 勾選後會在 Windows 啟動時自動執行 HoverPeek" FontSize="11" Foreground="#666"/>
+                        <TextBlock Text="• 程式會最小化到系統托盤運作" FontSize="11" Foreground="#666"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button x:Name="ResetButton" Content="重設為預設值" Padding="16,8" Margin="0,0,8,0" Click="OnResetClick"/>
+            <Button x:Name="CancelButton" Content="取消" Padding="16,8" Margin="0,0,8,0" Click="OnCancelClick"/>
+            <Button x:Name="SaveButton" Content="儲存" Padding="16,8" Click="OnSaveClick" IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window>
