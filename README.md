@@ -2,6 +2,8 @@
 
 > 🖱️ 一個輕量級的 Windows 檔案預覽工具，讓你在檔案總管中懸停滑鼠即可快速預覽檔案內容。
 
+**繁體中文** | **[English](README.en.md)**
+
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 ![.NET](https://img.shields.io/badge/.NET-8.0-purple.svg)
