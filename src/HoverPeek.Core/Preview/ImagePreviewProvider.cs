@@ -8,7 +8,7 @@ public sealed class ImagePreviewProvider : IPreviewProvider
         StringComparer.OrdinalIgnoreCase)
     {
         ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp",
-        ".ico", ".tiff", ".tif", ".svg", ".avif"
+        ".ico", ".tiff", ".tif", ".avif"
     };
 
     private readonly int _maxPreviewDimension;

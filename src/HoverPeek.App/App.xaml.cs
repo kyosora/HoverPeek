@@ -17,6 +17,7 @@ public partial class App : System.Windows.Application
     private ExplorerFileResolver? _fileResolver;
     private PreviewWindow? _previewWindow;
     private ImagePreviewProvider? _imageProvider;
+    private SvgPreviewProvider? _svgProvider;
     private ArchivePreviewProvider? _archiveProvider;
     private VideoPreviewProvider? _videoProvider;
     private TextPreviewProvider? _textProvider;
@@ -35,7 +36,7 @@ public partial class App : System.Windows.Application
         // 建立系統托盤圖示
         _notifyIcon = new WinForms.NotifyIcon
         {
-            Icon = SystemIcons.Application,  // 使用系統預設圖示（之後可替換成自訂圖示）
+            Icon = LoadAppIcon(),
             Visible = true,
             Text = "HoverPeek - 檔案預覽工具"
         };
@@ -74,6 +75,7 @@ public partial class App : System.Windows.Application
 
         // 使用設定初始化 Providers
         _imageProvider = new ImagePreviewProvider(settings.ImageMaxDimension);
+        _svgProvider = new SvgPreviewProvider(settings.ImageMaxDimension);
         _archiveProvider = new ArchivePreviewProvider(_imageProvider);
         _videoProvider = new VideoPreviewProvider();
         _textProvider = new TextPreviewProvider(
@@ -131,13 +133,15 @@ public partial class App : System.Windows.Application
 
             IPreviewProvider? provider = _archiveProvider?.CanHandle(filePath) == true
                 ? _archiveProvider
-                : _imageProvider?.CanHandle(filePath) == true
-                    ? _imageProvider
-                    : _videoProvider?.CanHandle(filePath) == true
-                        ? _videoProvider
-                        : _textProvider?.CanHandle(filePath) == true
-                            ? _textProvider
-                            : null;
+                : _svgProvider?.CanHandle(filePath) == true
+                    ? _svgProvider
+                    : _imageProvider?.CanHandle(filePath) == true
+                        ? _imageProvider
+                        : _videoProvider?.CanHandle(filePath) == true
+                            ? _videoProvider
+                            : _textProvider?.CanHandle(filePath) == true
+                                ? _textProvider
+                                : null;
 
             if (provider == null)
             {
@@ -215,6 +219,15 @@ public partial class App : System.Windows.Application
 
             settingsWindow.ShowDialog();
         });
+    }
+
+    private static Icon LoadAppIcon()
+    {
+        var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "HoverPeek.ico");
+        if (System.IO.File.Exists(iconPath))
+            return new Icon(iconPath);
+
+        return SystemIcons.Application;
     }
 
     protected override void OnExit(ExitEventArgs e)
