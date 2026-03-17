@@ -1,3 +1,4 @@
+using HoverPeek.Core.Localization;
 using System.Text;
 using Markdig;
 
@@ -31,13 +32,19 @@ public sealed class TextPreviewProvider : IPreviewProvider
         ".sh", ".bash", ".bat", ".ps1", ".cmd"
     };
 
-    private readonly long _maxFileSizeBytes;
-    private readonly int _maxPreviewLines;
+    private long _maxFileSizeBytes;
+    private int _maxPreviewLines;
 
     public TextPreviewProvider(long maxFileSizeBytes = 1024 * 1024, int maxPreviewLines = 1000)
     {
         _maxFileSizeBytes = maxFileSizeBytes;
         _maxPreviewLines = maxPreviewLines;
+    }
+
+    public void UpdateSettings(long maxFileSize, int maxLines)
+    {
+        _maxFileSizeBytes = maxFileSize;
+        _maxPreviewLines = maxLines;
     }
 
     public bool CanHandle(string filePath)
@@ -53,7 +60,7 @@ public sealed class TextPreviewProvider : IPreviewProvider
         {
             if (!File.Exists(filePath))
             {
-                throw new FileNotFoundException($"檔案不存在: {filePath}");
+                throw new FileNotFoundException(Strings.Format("FileNotFound", filePath));
             }
 
             var fileInfo = new FileInfo(filePath);
@@ -64,7 +71,7 @@ public sealed class TextPreviewProvider : IPreviewProvider
                 return new PreviewResult
                 {
                     Kind = PreviewKind.Text,
-                    TextContent = $"檔案過大無法預覽\n\n檔案大小: {FormatFileSize(fileInfo.Length)}\n最大支援: {FormatFileSize(_maxFileSizeBytes)}",
+                    TextContent = $"{Strings.FileTooLargeTitle}\n\n{Strings.Format("FileSizeLabel", FormatFileSize(fileInfo.Length))}\n{Strings.Format("MaxSizeLabel", FormatFileSize(_maxFileSizeBytes))}",
                     TextEncoding = "N/A",
                     FileExtension = Path.GetExtension(filePath)
                 };
@@ -103,7 +110,7 @@ public sealed class TextPreviewProvider : IPreviewProvider
             {
                 var truncatedLines = lines.Take(_maxPreviewLines).ToArray();
                 content = string.Join('\n', truncatedLines);
-                content += $"\n\n... (已截斷，僅顯示前 {_maxPreviewLines} 行，共 {lines.Length} 行)";
+                content += $"\n\n{Strings.Format("TruncatedMessage", _maxPreviewLines, lines.Length)}";
             }
 
             // 檢查是否為 Markdown 檔案
@@ -141,7 +148,7 @@ public sealed class TextPreviewProvider : IPreviewProvider
         }
         catch (Exception ex)
         {
-            throw new Exception($"讀取文字檔案失敗: {filePath}", ex);
+            throw new Exception(Strings.Format("ReadTextFailed", filePath), ex);
         }
     }
 

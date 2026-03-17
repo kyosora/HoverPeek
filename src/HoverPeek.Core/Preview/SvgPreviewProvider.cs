@@ -1,3 +1,4 @@
+using HoverPeek.Core.Localization;
 using SkiaSharp;
 using Svg.Skia;
 using System.Text;
@@ -12,11 +13,16 @@ public sealed class SvgPreviewProvider : IPreviewProvider
         ".svg"
     };
 
-    private readonly int _maxPreviewDimension;
+    private int _maxPreviewDimension;
 
     public SvgPreviewProvider(int maxPreviewDimension = 800)
     {
         _maxPreviewDimension = maxPreviewDimension;
+    }
+
+    public void UpdateSettings(int maxDimension)
+    {
+        _maxPreviewDimension = maxDimension;
     }
 
     public bool CanHandle(string filePath)
@@ -32,21 +38,21 @@ public sealed class SvgPreviewProvider : IPreviewProvider
         {
             if (!File.Exists(filePath))
             {
-                throw new FileNotFoundException($"檔案不存在: {filePath}");
+                throw new FileNotFoundException(Strings.Format("FileNotFound", filePath));
             }
 
             var svgContent = await File.ReadAllTextAsync(filePath, ct);
 
             if (string.IsNullOrWhiteSpace(svgContent))
             {
-                throw new InvalidOperationException($"SVG 檔案是空的: {filePath}");
+                throw new InvalidOperationException(Strings.Format("SvgFileEmpty", filePath));
             }
 
             return GenerateFromSvgContent(svgContent);
         }
         catch (Exception ex)
         {
-            throw new Exception($"GeneratePreviewAsync 失敗: {filePath}", ex);
+            throw new Exception(Strings.Format("GeneratePreviewFailed", filePath), ex);
         }
     }
 
@@ -62,14 +68,14 @@ public sealed class SvgPreviewProvider : IPreviewProvider
 
             if (picture == null)
             {
-                throw new InvalidOperationException("無法載入 SVG 內容");
+                throw new InvalidOperationException(Strings.CannotLoadSvg);
             }
 
             var bounds = picture.CullRect;
             if (bounds.Width <= 0 || bounds.Height <= 0)
             {
                 throw new InvalidOperationException(
-                    $"SVG 尺寸無效: {bounds.Width}x{bounds.Height}");
+                    Strings.Format("SvgInvalidSize", bounds.Width, bounds.Height));
             }
 
             // 計算縮放比例
@@ -105,7 +111,7 @@ public sealed class SvgPreviewProvider : IPreviewProvider
         }
         catch (Exception ex)
         {
-            throw new Exception("GenerateFromSvgContent 失敗", ex);
+            throw new Exception(Strings.GenerateSvgFailed, ex);
         }
     }
 

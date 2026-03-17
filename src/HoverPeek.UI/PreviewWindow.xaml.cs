@@ -7,6 +7,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using HoverPeek.Core.Localization;
 using HoverPeek.Core.Preview;
 using LibVLCSharp.Shared;
 using ICSharpCode.AvalonEdit.Highlighting;
@@ -27,6 +28,10 @@ public partial class PreviewWindow : Window
     private LibVLC? _libVLC;
     private LibVLCSharp.Shared.MediaPlayer? _mediaPlayer;
 
+    private double _windowWidth = 800;
+    private double _windowHeight = 600;
+    private bool _centerWindow = true;
+
     public PreviewWindow(System.Action<string, string>? onImageInArchiveHover = null)
     {
         InitializeComponent();
@@ -38,17 +43,24 @@ public partial class PreviewWindow : Window
 
     public bool IsMouseInside => _isMouseInside;
 
-    /// <summary>
-    /// 檢查指定的滑鼠座標是否在預覽視窗的「影響範圍」內
-    /// 影響範圍 = 視窗本身 + 周圍 150px 的緩衝區
-    /// 用於防止滑鼠移動到預覽視窗時經過其他檔案觸發新預覽
-    /// </summary>
+    public void UpdateSettings(double width, double height, bool centerWindow, int fadeInMs, int fadeOutMs)
+    {
+        _windowWidth = width;
+        _windowHeight = height;
+        _centerWindow = centerWindow;
+
+        var fadeIn = (Storyboard)Resources["FadeIn"];
+        var fadeOut = (Storyboard)Resources["FadeOut"];
+        ((DoubleAnimation)fadeIn.Children[0]).Duration = TimeSpan.FromMilliseconds(fadeInMs);
+        ((DoubleAnimation)fadeOut.Children[0]).Duration = TimeSpan.FromMilliseconds(fadeOutMs);
+    }
+
     public bool IsMouseNearWindow(int mouseX, int mouseY)
     {
         if (!IsVisible || Opacity < 0.1)
             return false;
 
-        const int buffer = 150;  // 緩衝區大小（px）
+        const int buffer = 150;
 
         var windowLeft = Left;
         var windowTop = Top;
@@ -72,15 +84,9 @@ public partial class PreviewWindow : Window
 
     public void ShowPreview(PreviewResult result, string filePath, int mouseX, int mouseY)
     {
-        // 停止所有正在執行的動畫，避免衝突
         BeginAnimation(OpacityProperty, null);
-
-        // 立即隱藏，避免內容更新時的閃現
         Opacity = 0;
-
         HideAllPanels();
-
-        // 強制完成 UI 渲染，確保舊內容已清除
         Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Render);
 
         switch (result.Kind)
@@ -118,14 +124,12 @@ public partial class PreviewWindow : Window
         bitmap.EndInit();
         bitmap.Freeze();
 
-        // GIF 動畫支援
         if (result.ImageFormat == "Gif")
         {
             WpfAnimatedGif.ImageBehavior.SetAnimatedSource(ImagePreview, bitmap);
         }
         else
         {
-            // 清除可能的動畫綁定，使用靜態圖片
             WpfAnimatedGif.ImageBehavior.SetAnimatedSource(ImagePreview, null);
             ImagePreview.Source = bitmap;
         }
@@ -138,11 +142,10 @@ public partial class PreviewWindow : Window
         _currentArchivePath = archivePath;
         _currentEntries = result.Entries;
 
-        ArchiveTitle.Text = $"📦 {System.IO.Path.GetFileName(archivePath)} ({result.Entries?.Count ?? 0} 個項目)";
+        ArchiveTitle.Text = $"\U0001f4e6 {System.IO.Path.GetFileName(archivePath)} ({Strings.Format("ArchiveItemCount", result.Entries?.Count ?? 0)})";
         ArchivePanel.Visibility = Visibility.Visible;
         ExpandButton.Visibility = Visibility.Visible;
 
-        // 自動展開檔案列表
         var contentGrid = (Grid)ArchivePanel.FindName("ContentGrid");
         if (contentGrid != null)
         {
@@ -152,7 +155,7 @@ public partial class PreviewWindow : Window
 
             FileListView.ItemsSource = displayItems;
             contentGrid.Visibility = Visibility.Visible;
-            ExpandButton.Content = "收起檔案列表";
+            ExpandButton.Content = Strings.CollapseFileList;
         }
 
         InnerImagePreview.Visibility = Visibility.Collapsed;
@@ -168,35 +171,28 @@ public partial class PreviewWindow : Window
 
         var fileName = System.IO.Path.GetFileName(filePath);
         var extension = result.FileExtension ?? "";
-        var encoding = result.TextEncoding ?? "未知";
+        var encoding = result.TextEncoding ?? Strings.EncodingUnknown;
 
-        // 1. 如果是 Markdown 且有 HTML 內容，嘗試使用 WebView2 顯示
-        // 同時先顯示純文字作為 fallback，如果 WebView2 初始化成功會自動切換
         if (result.IsMarkdown && !string.IsNullOrEmpty(result.MarkdownHtml))
         {
-            // 先顯示純文字內容（作為 fallback 和載入中的提示）
-            TextPreviewHeader.Text = $"📄 {fileName} ({encoding})";
+            TextPreviewHeader.Text = $"\U0001f4c4 {fileName} ({encoding})";
             TextPreviewContent.Text = result.TextContent;
             TextPreviewScroll.Visibility = Visibility.Visible;
-
-            // 異步嘗試初始化 WebView2（成功後會隱藏純文字）
             _ = InitializeAndShowMarkdown(result.MarkdownHtml);
             return;
         }
 
-        // 2. 否則如果是程式碼檔案，使用 AvalonEdit 語法高亮
         var syntaxHighlighting = GetSyntaxHighlighting(extension);
         if (syntaxHighlighting != null)
         {
-            CodePreviewHeader.Text = $"📄 {fileName} ({encoding})";
+            CodePreviewHeader.Text = $"\U0001f4c4 {fileName} ({encoding})";
             CodeEditor.Text = result.TextContent;
             CodeEditor.SyntaxHighlighting = syntaxHighlighting;
             CodeEditorPanel.Visibility = Visibility.Visible;
             return;
         }
 
-        // 3. 否則使用純文字顯示
-        TextPreviewHeader.Text = $"📄 {fileName} ({encoding})";
+        TextPreviewHeader.Text = $"\U0001f4c4 {fileName} ({encoding})";
         TextPreviewContent.Text = result.TextContent;
         TextPreviewScroll.Visibility = Visibility.Visible;
     }
@@ -205,12 +201,10 @@ public partial class PreviewWindow : Window
     {
         try
         {
-            // 確保在 UI 執行緒上執行
             await Dispatcher.InvokeAsync(async () =>
             {
                 try
                 {
-                    // 初始化 WebView2
                     await MarkdownWebView.EnsureCoreWebView2Async();
 
                     var htmlContent = $@"
@@ -235,21 +229,17 @@ public partial class PreviewWindow : Window
 
                     MarkdownWebView.NavigateToString(htmlContent);
                     MarkdownWebView.Visibility = Visibility.Visible;
-
-                    // 成功顯示 WebView2，隱藏純文字 fallback
                     TextPreviewScroll.Visibility = Visibility.Collapsed;
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"WebView2 初始化失敗: {ex.Message}");
-                    // 初始化失敗時隱藏 WebView（保持純文字 fallback 顯示）
+                    System.Diagnostics.Debug.WriteLine($"WebView2 init failed: {ex.Message}");
                     MarkdownWebView.Visibility = Visibility.Collapsed;
                 }
             });
         }
         catch
         {
-            // 忽略所有錯誤，避免未觀察的例外
         }
     }
 
@@ -270,7 +260,7 @@ public partial class PreviewWindow : Window
             ".xml" or ".xaml" or ".config" => manager.GetDefinition("XML"),
             ".html" or ".htm" => manager.GetDefinition("HTML"),
             ".css" or ".scss" or ".sass" => manager.GetDefinition("CSS"),
-            ".json" => manager.GetDefinition("JavaScript"),  // JSON 用 JavaScript 語法
+            ".json" => manager.GetDefinition("JavaScript"),
             ".sql" => manager.GetDefinition("SQL"),
             ".sh" or ".bash" => manager.GetDefinition("Bash"),
             ".ps1" => manager.GetDefinition("PowerShell"),
@@ -293,7 +283,6 @@ public partial class PreviewWindow : Window
         CodeEditorPanel.Visibility = Visibility.Collapsed;
         UnsupportedText.Visibility = Visibility.Collapsed;
 
-        // 清除圖片來源和 GIF 動畫綁定
         ImagePreview.Source = null;
         WpfAnimatedGif.ImageBehavior.SetAnimatedSource(ImagePreview, null);
 
@@ -302,13 +291,11 @@ public partial class PreviewWindow : Window
 
         FileListView.ItemsSource = null;
 
-        // 清除文字內容
         TextPreviewContent.Text = string.Empty;
         TextPreviewHeader.Text = string.Empty;
         CodeEditor.Text = string.Empty;
         CodePreviewHeader.Text = string.Empty;
 
-        // 停止影片播放
         StopVideoPlayback();
     }
 
@@ -320,7 +307,7 @@ public partial class PreviewWindow : Window
         if (contentGrid.Visibility == Visibility.Visible)
         {
             contentGrid.Visibility = Visibility.Collapsed;
-            ExpandButton.Content = "展開檔案列表";
+            ExpandButton.Content = Strings.ExpandFileList;
             InnerImagePreview.Visibility = Visibility.Collapsed;
         }
         else
@@ -331,7 +318,7 @@ public partial class PreviewWindow : Window
 
             FileListView.ItemsSource = displayItems;
             contentGrid.Visibility = Visibility.Visible;
-            ExpandButton.Content = "收起檔案列表";
+            ExpandButton.Content = Strings.CollapseFileList;
         }
     }
 
@@ -372,14 +359,12 @@ public partial class PreviewWindow : Window
         bitmap.EndInit();
         bitmap.Freeze();
 
-        // GIF 動畫支援
         if (imageResult.ImageFormat == "Gif")
         {
             WpfAnimatedGif.ImageBehavior.SetAnimatedSource(InnerImagePreview, bitmap);
         }
         else
         {
-            // 清除可能的動畫綁定，使用靜態圖片
             WpfAnimatedGif.ImageBehavior.SetAnimatedSource(InnerImagePreview, null);
             InnerImagePreview.Source = bitmap;
         }
@@ -392,15 +377,12 @@ public partial class PreviewWindow : Window
         var screenWidth = SystemParameters.PrimaryScreenWidth;
         var screenHeight = SystemParameters.PrimaryScreenHeight;
 
-        // 固定視窗大小，避免因圖片大小變化導致位置飄移
-        const double fixedWidth = 800;
-        const double fixedHeight = 600;
+        var fixedWidth = _windowWidth;
+        var fixedHeight = _windowHeight;
 
-        // 固定在螢幕正中間
         double left = (screenWidth - fixedWidth) / 2;
         double top = (screenHeight - fixedHeight) / 2;
 
-        // 確保不超出螢幕邊界
         if (left < 10) left = 10;
         if (top < 10) top = 10;
         if (left + fixedWidth > screenWidth - 10)
@@ -446,21 +428,20 @@ public partial class PreviewWindow : Window
                 EnableHardwareDecoding = true
             };
 
-            // 訂閱錯誤事件
             _mediaPlayer.EncounteredError += (sender, args) =>
             {
                 Dispatcher.InvokeAsync(() =>
                 {
                     StopVideoPlayback();
                     VideoPlayer.Visibility = Visibility.Collapsed;
-                    UnsupportedText.Text = "影片無法播放";
+                    UnsupportedText.Text = Strings.VideoCannotPlay;
                     UnsupportedText.Visibility = Visibility.Visible;
                 });
             };
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"LibVLC 初始化失敗: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"LibVLC init failed: {ex.Message}");
         }
     }
 
@@ -483,9 +464,9 @@ public partial class PreviewWindow : Window
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"影片播放失敗: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Video playback failed: {ex.Message}");
             VideoPlayer.Visibility = Visibility.Collapsed;
-            UnsupportedText.Text = "影片無法播放";
+            UnsupportedText.Text = Strings.VideoCannotPlay;
             UnsupportedText.Visibility = Visibility.Visible;
         }
     }
@@ -500,7 +481,7 @@ public partial class PreviewWindow : Window
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"停止影片播放失敗: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stop video failed: {ex.Message}");
             }
         }
     }
@@ -531,7 +512,7 @@ public sealed class ArchiveDisplayItem
 
     public string Name => Entry.Name;
     public string SizeText => Entry.IsDirectory ? "" : FormatFileSize(Entry.Size);
-    public string TypeIcon => Entry.IsDirectory ? "📁" : Entry.IsImage ? "🖼️" : "📄";
+    public string TypeIcon => Entry.IsDirectory ? "\U0001f4c1" : Entry.IsImage ? "\U0001f5bc\ufe0f" : "\U0001f4c4";
 
     private static string FormatFileSize(long bytes)
     {

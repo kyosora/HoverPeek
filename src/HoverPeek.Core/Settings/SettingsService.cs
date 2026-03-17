@@ -1,9 +1,12 @@
 using System.Text.Json;
+using HoverPeek.Core.Localization;
 
 namespace HoverPeek.Core.Settings;
 
 public sealed class SettingsService
 {
+    public event Action<AppSettings>? SettingsChanged;
+
     private static readonly string SettingsFilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "HoverPeek",
@@ -56,10 +59,11 @@ public sealed class SettingsService
 
             File.WriteAllText(SettingsFilePath, json);
             _currentSettings = settings;
+            SettingsChanged?.Invoke(settings);
         }
         catch (Exception ex)
         {
-            throw new Exception($"儲存設定失敗: {ex.Message}", ex);
+            throw new Exception(Strings.Format("SaveSettingsFailed", ex.Message), ex);
         }
     }
 

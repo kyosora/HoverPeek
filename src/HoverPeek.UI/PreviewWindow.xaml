@@ -5,6 +5,7 @@
         xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
+        xmlns:loc="clr-namespace:HoverPeek.Core.Localization;assembly=HoverPeek.Core"
         Title="HoverPeek"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -59,7 +60,7 @@
                            MaxWidth="800"/>
 
                 <Button x:Name="ExpandButton"
-                        Content="展開檔案列表"
+                        Content="{x:Static loc:Strings.ExpandFileList}"
                         Padding="12,6"
                         Margin="0,0,0,8"
                         Click="OnExpandClick"
@@ -81,21 +82,21 @@
                               MouseMove="OnFileListMouseMove">
                         <ListView.View>
                             <GridView>
-                                <GridViewColumn Header="名稱" Width="250">
+                                <GridViewColumn Header="{x:Static loc:Strings.HeaderName}" Width="250">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
-                                <GridViewColumn Header="大小" Width="100">
+                                <GridViewColumn Header="{x:Static loc:Strings.HeaderSize}" Width="100">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBlock Text="{Binding SizeText}" TextAlignment="Right"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
-                                <GridViewColumn Header="類型" Width="60">
+                                <GridViewColumn Header="{x:Static loc:Strings.HeaderType}" Width="60">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBlock Text="{Binding TypeIcon}"/>
@@ -179,7 +180,7 @@
 
             <TextBlock x:Name="UnsupportedText"
                        Visibility="Collapsed"
-                       Text="不支援預覽此檔案類型"
+                       Text="{x:Static loc:Strings.UnsupportedFileType}"
                        FontSize="12"
                        Foreground="#888"
                        HorizontalAlignment="Center"

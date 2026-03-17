@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Windows.Controls;
+using HoverPeek.Core.Localization;
 using HoverPeek.Core.Settings;
 using Microsoft.Win32;
 using MessageBox = System.Windows.MessageBox;
@@ -53,32 +55,53 @@ public partial class SettingsWindow : Window
 
         // 啟動設定
         StartWithWindowsCheckBox.IsChecked = _currentSettings.StartWithWindows;
+
+        // 語言
+        SelectLanguageInComboBox(_currentSettings.Language);
+    }
+
+    private void SelectLanguageInComboBox(string language)
+    {
+        foreach (ComboBoxItem item in LanguageComboBox.Items)
+        {
+            if (item.Tag is string tag && tag == language)
+            {
+                LanguageComboBox.SelectedItem = item;
+                return;
+            }
+        }
+        LanguageComboBox.SelectedIndex = 0; // default zh-TW
+    }
+
+    private string GetSelectedLanguage()
+    {
+        if (LanguageComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag)
+            return tag;
+        return "zh-TW";
     }
 
     private void OnSaveClick(object sender, RoutedEventArgs e)
     {
         try
         {
-            // 從 UI 讀取設定
+            var oldLanguage = _currentSettings.Language;
+            var newLanguage = GetSelectedLanguage();
+
             var newSettings = new AppSettings
             {
-                // 懸停行為
                 HoverDelayMs = int.Parse(HoverDelayTextBox.Text),
                 JitterTolerancePx = int.Parse(JitterToleranceTextBox.Text),
                 AutoCloseDelayMs = int.Parse(AutoCloseDelayTextBox.Text),
 
-                // 預覽視窗
                 WindowWidth = double.Parse(WindowWidthTextBox.Text),
                 WindowHeight = double.Parse(WindowHeightTextBox.Text),
                 CenterWindow = CenterWindowCheckBox.IsChecked == true,
                 FadeInDurationMs = int.Parse(FadeInDurationTextBox.Text),
                 FadeOutDurationMs = int.Parse(FadeOutDurationTextBox.Text),
 
-                // 圖片預覽
                 ImageMaxDimension = int.Parse(ImageMaxDimensionTextBox.Text),
                 EnableGifAnimation = EnableGifAnimationCheckBox.IsChecked == true,
 
-                // 文字預覽
                 TextMaxFileSizeMB = long.Parse(TextMaxFileSizeTextBox.Text),
                 TextMaxLines = int.Parse(TextMaxLinesTextBox.Text),
                 TextFontSize = int.Parse(TextFontSizeTextBox.Text),
@@ -86,26 +109,27 @@ public partial class SettingsWindow : Window
                 EnableMarkdownRendering = EnableMarkdownRenderingCheckBox.IsChecked == true,
                 EnableSyntaxHighlighting = EnableSyntaxHighlightingCheckBox.IsChecked == true,
 
-                // 影片預覽
                 VideoAutoPlay = VideoAutoPlayCheckBox.IsChecked == true,
                 VideoMuted = VideoMutedCheckBox.IsChecked == true,
 
-                // 壓縮檔預覽
                 ArchiveAutoExpand = ArchiveAutoExpandCheckBox.IsChecked == true,
 
-                // 啟動設定
-                StartWithWindows = StartWithWindowsCheckBox.IsChecked == true
+                StartWithWindows = StartWithWindowsCheckBox.IsChecked == true,
+
+                Language = newLanguage
             };
 
-            // 處理開機啟動
             SetStartupRegistry(newSettings.StartWithWindows);
-
-            // 儲存設定
             _settingsService.SaveSettings(newSettings);
 
+            var languageChanged = oldLanguage != newLanguage;
+            var message = languageChanged
+                ? $"{Strings.SaveSuccessMessage}\n\n{Strings.SaveSuccessLanguageChanged}"
+                : Strings.SaveSuccessMessage;
+
             MessageBox.Show(
-                "設定已儲存！\n\n部分設定需要重新啟動 HoverPeek 才會生效。",
-                "HoverPeek",
+                message,
+                Strings.TrayRunningTitle,
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
 
@@ -115,8 +139,8 @@ public partial class SettingsWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show(
-                $"儲存設定失敗：\n\n{ex.Message}",
-                "HoverPeek 錯誤",
+                Strings.Format("SaveErrorMessage", ex.Message),
+                Strings.SaveErrorTitle,
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
@@ -131,8 +155,8 @@ public partial class SettingsWindow : Window
     private void OnResetClick(object sender, RoutedEventArgs e)
     {
         var result = MessageBox.Show(
-            "確定要重設為預設值嗎？\n\n這將會清除所有自訂設定。",
-            "HoverPeek",
+            Strings.ResetConfirmMessage,
+            Strings.TrayRunningTitle,
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
 
@@ -170,7 +194,6 @@ public partial class SettingsWindow : Window
         }
         catch
         {
-            // 忽略註冊表錯誤
         }
     }
 }

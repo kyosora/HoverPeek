@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Core - Error messages -->
+  <data name="FileNotFound" xml:space="preserve">
+    <value>File not found: {0}</value>
+  </data>
+  <data name="FileEmpty" xml:space="preserve">
+    <value>File is empty: {0}</value>
+  </data>
+  <data name="CannotDecodeImage" xml:space="preserve">
+    <value>Cannot decode image. File: {0}, Size: {1} bytes</value>
+  </data>
+  <data name="FileTooSmallHeader" xml:space="preserve">
+    <value>File too small</value>
+  </data>
+  <data name="SKCodecNull" xml:space="preserve">
+    <value>SKCodec.Create returned null. File size: {0} bytes, First 16 bytes: {1}</value>
+  </data>
+  <data name="SKBitmapDecodeNull" xml:space="preserve">
+    <value>SKBitmap.Decode returned null. Original size: {0}x{1}</value>
+  </data>
+  <data name="ResizeNull" xml:space="preserve">
+    <value>Resize returned null. Original: {0}x{1}, Scaled: {2}x{3}</value>
+  </data>
+  <data name="GeneratePreviewFailed" xml:space="preserve">
+    <value>GeneratePreviewAsync failed: {0}</value>
+  </data>
+  <data name="GenerateFromBytesFailed" xml:space="preserve">
+    <value>GenerateFromBytes failed. Byte count: {0}</value>
+  </data>
+  <data name="SvgFileEmpty" xml:space="preserve">
+    <value>SVG file is empty: {0}</value>
+  </data>
+  <data name="CannotLoadSvg" xml:space="preserve">
+    <value>Cannot load SVG content</value>
+  </data>
+  <data name="SvgInvalidSize" xml:space="preserve">
+    <value>Invalid SVG dimensions: {0}x{1}</value>
+  </data>
+  <data name="GenerateSvgFailed" xml:space="preserve">
+    <value>GenerateFromSvgContent failed</value>
+  </data>
+  <data name="ReadTextFailed" xml:space="preserve">
+    <value>Failed to read text file: {0}</value>
+  </data>
+  <data name="SaveSettingsFailed" xml:space="preserve">
+    <value>Failed to save settings: {0}</value>
+  </data>
+
+  <!-- Core - User-facing text -->
+  <data name="FileTooLargeTitle" xml:space="preserve">
+    <value>File too large to preview</value>
+  </data>
+  <data name="FileSizeLabel" xml:space="preserve">
+    <value>File size: {0}</value>
+  </data>
+  <data name="MaxSizeLabel" xml:space="preserve">
+    <value>Maximum supported: {0}</value>
+  </data>
+  <data name="TruncatedMessage" xml:space="preserve">
+    <value>... (Truncated, showing first {0} lines of {1} total)</value>
+  </data>
+
+  <!-- UI - PreviewWindow -->
+  <data name="ExpandFileList" xml:space="preserve">
+    <value>Expand file list</value>
+  </data>
+  <data name="CollapseFileList" xml:space="preserve">
+    <value>Collapse file list</value>
+  </data>
+  <data name="ArchiveItemCount" xml:space="preserve">
+    <value>{0} items</value>
+  </data>
+  <data name="UnsupportedFileType" xml:space="preserve">
+    <value>This file type is not supported for preview</value>
+  </data>
+  <data name="VideoCannotPlay" xml:space="preserve">
+    <value>Cannot play video</value>
+  </data>
+  <data name="HeaderName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="HeaderSize" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="HeaderType" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="EncodingUnknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+
+  <!-- App - System tray -->
+  <data name="TrayTooltip" xml:space="preserve">
+    <value>HoverPeek - File Preview Tool</value>
+  </data>
+  <data name="TraySettings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="TrayExitApp" xml:space="preserve">
+    <value>Exit HoverPeek</value>
+  </data>
+  <data name="TrayRunningTitle" xml:space="preserve">
+    <value>HoverPeek</value>
+  </data>
+  <data name="TrayRunningMessage" xml:space="preserve">
+    <value>HoverPeek is running in the background
+
+Hover over images, archives, or videos in File Explorer to preview</value>
+  </data>
+  <data name="MouseHookFailed" xml:space="preserve">
+    <value>Cannot install mouse hook: {0}
+
+Please ensure the application has sufficient permissions.</value>
+  </data>
+  <data name="StartupFailedTitle" xml:space="preserve">
+    <value>HoverPeek Startup Failed</value>
+  </data>
+
+  <!-- App - Preview errors -->
+  <data name="PreviewErrorTitle" xml:space="preserve">
+    <value>HoverPeek Preview Error</value>
+  </data>
+  <data name="PreviewErrorMessage" xml:space="preserve">
+    <value>Error occurred while previewing:
+
+File: {0}
+
+</value>
+  </data>
+  <data name="ErrorLabel" xml:space="preserve">
+    <value>[Error {0}]</value>
+  </data>
+  <data name="FullStackTrace" xml:space="preserve">
+    <value>
+Full stack trace:
+{0}</value>
+  </data>
+
+  <!-- App - Unhandled exceptions -->
+  <data name="UnhandledExceptionMessage" xml:space="preserve">
+    <value>Unhandled exception occurred:
+
+{0}
+{1}
+
+Stack trace:
+{2}</value>
+  </data>
+  <data name="FatalErrorMessage" xml:space="preserve">
+    <value>Fatal error occurred:
+
+{0}
+{1}
+
+Stack trace:
+{2}</value>
+  </data>
+  <data name="TaskExceptionMessage" xml:space="preserve">
+    <value>Unobserved task exception:
+
+{0}
+{1}
+
+Stack trace:
+{2}</value>
+  </data>
+  <data name="ErrorTitle" xml:space="preserve">
+    <value>HoverPeek Error</value>
+  </data>
+  <data name="FatalErrorTitle" xml:space="preserve">
+    <value>HoverPeek Fatal Error</value>
+  </data>
+  <data name="TaskErrorTitle" xml:space="preserve">
+    <value>HoverPeek Task Error</value>
+  </data>
+
+  <!-- Settings window -->
+  <data name="SettingsWindowTitle" xml:space="preserve">
+    <value>HoverPeek Settings</value>
+  </data>
+  <data name="TabHoverBehavior" xml:space="preserve">
+    <value>Hover Behavior</value>
+  </data>
+  <data name="TabPreviewWindow" xml:space="preserve">
+    <value>Preview Window</value>
+  </data>
+  <data name="TabImagePreview" xml:space="preserve">
+    <value>Image Preview</value>
+  </data>
+  <data name="TabTextPreview" xml:space="preserve">
+    <value>Text Preview</value>
+  </data>
+  <data name="TabVideoPreview" xml:space="preserve">
+    <value>Video Preview</value>
+  </data>
+  <data name="TabArchivePreview" xml:space="preserve">
+    <value>Archive Preview</value>
+  </data>
+  <data name="TabStartup" xml:space="preserve">
+    <value>Startup</value>
+  </data>
+
+  <!-- Settings - Hover behavior -->
+  <data name="LabelHoverDelay" xml:space="preserve">
+    <value>Hover Delay (ms)</value>
+  </data>
+  <data name="LabelJitterTolerance" xml:space="preserve">
+    <value>Jitter Tolerance (px)</value>
+  </data>
+  <data name="LabelAutoCloseDelay" xml:space="preserve">
+    <value>Auto Close Delay (ms)</value>
+  </data>
+  <data name="DescriptionLabel" xml:space="preserve">
+    <value>Notes:</value>
+  </data>
+  <data name="DescHoverDelay" xml:space="preserve">
+    <value>&#x2022; Hover delay: how long the mouse must stay before showing preview</value>
+  </data>
+  <data name="DescJitterTolerance" xml:space="preserve">
+    <value>&#x2022; Jitter tolerance: slight mouse movement won't reset the timer</value>
+  </data>
+  <data name="DescAutoCloseDelay" xml:space="preserve">
+    <value>&#x2022; Auto close delay: how long after leaving a file before closing preview</value>
+  </data>
+
+  <!-- Settings - Preview window -->
+  <data name="LabelWindowWidth" xml:space="preserve">
+    <value>Window Width (px)</value>
+  </data>
+  <data name="LabelWindowHeight" xml:space="preserve">
+    <value>Window Height (px)</value>
+  </data>
+  <data name="LabelCenterWindow" xml:space="preserve">
+    <value>Center on screen (otherwise follow mouse)</value>
+  </data>
+  <data name="LabelFadeInDuration" xml:space="preserve">
+    <value>Fade In Duration (ms)</value>
+  </data>
+  <data name="LabelFadeOutDuration" xml:space="preserve">
+    <value>Fade Out Duration (ms)</value>
+  </data>
+
+  <!-- Settings - Image preview -->
+  <data name="LabelImageMaxDimension" xml:space="preserve">
+    <value>Max Preview Size (px)</value>
+  </data>
+  <data name="LabelEnableGifAnimation" xml:space="preserve">
+    <value>Play GIF animations</value>
+  </data>
+  <data name="DescImageScale" xml:space="preserve">
+    <value>&#x2022; Large images are automatically scaled down to this size</value>
+  </data>
+  <data name="DescGifStatic" xml:space="preserve">
+    <value>&#x2022; Disable GIF animation to show the first frame only</value>
+  </data>
+
+  <!-- Settings - Text preview -->
+  <data name="LabelTextMaxFileSize" xml:space="preserve">
+    <value>Max File Size (MB)</value>
+  </data>
+  <data name="LabelTextMaxLines" xml:space="preserve">
+    <value>Max Display Lines</value>
+  </data>
+  <data name="LabelTextFontSize" xml:space="preserve">
+    <value>Font Size</value>
+  </data>
+  <data name="LabelTextFontFamily" xml:space="preserve">
+    <value>Font Family</value>
+  </data>
+  <data name="LabelEnableMarkdownRendering" xml:space="preserve">
+    <value>Enable Markdown rendering</value>
+  </data>
+  <data name="LabelEnableSyntaxHighlighting" xml:space="preserve">
+    <value>Enable syntax highlighting</value>
+  </data>
+  <data name="DescMarkdownRendering" xml:space="preserve">
+    <value>&#x2022; Markdown rendering displays .md files as formatted web pages</value>
+  </data>
+  <data name="DescSyntaxHighlighting" xml:space="preserve">
+    <value>&#x2022; Syntax highlighting adds color to code files</value>
+  </data>
+
+  <!-- Settings - Video preview -->
+  <data name="LabelVideoAutoPlay" xml:space="preserve">
+    <value>Auto-play videos</value>
+  </data>
+  <data name="LabelVideoMuted" xml:space="preserve">
+    <value>Mute playback</value>
+  </data>
+  <data name="DescVideoThumbnail" xml:space="preserve">
+    <value>&#x2022; Disable auto-play to show video thumbnail</value>
+  </data>
+  <data name="DescVideoMuted" xml:space="preserve">
+    <value>&#x2022; Recommended to keep muted to avoid disturbance</value>
+  </data>
+
+  <!-- Settings - Archive preview -->
+  <data name="LabelArchiveAutoExpand" xml:space="preserve">
+    <value>Auto-expand file list</value>
+  </data>
+  <data name="DescArchiveAutoExpand" xml:space="preserve">
+    <value>&#x2022; Auto-expand shows archive contents immediately on preview</value>
+  </data>
+  <data name="DescArchiveManual" xml:space="preserve">
+    <value>&#x2022; Uncheck to manually click the expand button</value>
+  </data>
+
+  <!-- Settings - Startup -->
+  <data name="LabelStartWithWindows" xml:space="preserve">
+    <value>Start with Windows</value>
+  </data>
+  <data name="DescStartup" xml:space="preserve">
+    <value>&#x2022; HoverPeek will launch automatically when Windows starts</value>
+  </data>
+  <data name="DescTrayMinimize" xml:space="preserve">
+    <value>&#x2022; The app runs minimized in the system tray</value>
+  </data>
+
+  <!-- Settings - Language -->
+  <data name="LabelLanguage" xml:space="preserve">
+    <value>Interface Language</value>
+  </data>
+  <data name="LanguageZhTW" xml:space="preserve">
+    <value>繁體中文</value>
+  </data>
+  <data name="LanguageEn" xml:space="preserve">
+    <value>English</value>
+  </data>
+
+  <!-- Settings - Buttons -->
+  <data name="ButtonReset" xml:space="preserve">
+    <value>Reset to Default</value>
+  </data>
+  <data name="ButtonCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ButtonSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+
+  <!-- Settings - Messages -->
+  <data name="SaveSuccessMessage" xml:space="preserve">
+    <value>Settings saved!</value>
+  </data>
+  <data name="SaveSuccessLanguageChanged" xml:space="preserve">
+    <value>Language has been changed. Please restart HoverPeek for it to take effect.</value>
+  </data>
+  <data name="SaveErrorMessage" xml:space="preserve">
+    <value>Failed to save settings:
+
+{0}</value>
+  </data>
+  <data name="SaveErrorTitle" xml:space="preserve">
+    <value>HoverPeek Error</value>
+  </data>
+  <data name="ResetConfirmMessage" xml:space="preserve">
+    <value>Are you sure you want to reset to default values?
+
+This will clear all custom settings.</value>
+  </data>
+</root>

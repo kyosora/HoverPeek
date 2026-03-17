@@ -36,6 +36,9 @@ public sealed class AppSettings
     // 啟動設定
     public bool StartWithWindows { get; set; } = false;
 
+    // 語言
+    public string Language { get; set; } = "zh-TW";
+
     // 預設值
     public static AppSettings Default => new();
 }

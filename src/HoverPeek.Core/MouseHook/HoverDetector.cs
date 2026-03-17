@@ -6,8 +6,8 @@ namespace HoverPeek.Core.MouseHook;
 /// </summary>
 public sealed class HoverDetector : IDisposable
 {
-    private readonly int _hoverThresholdMs;
-    private readonly int _jitterTolerancePx;
+    private int _hoverThresholdMs;
+    private int _jitterTolerancePx;
     private readonly GlobalMouseHook _mouseHook;
 
     private CancellationTokenSource? _cts;
@@ -29,6 +29,12 @@ public sealed class HoverDetector : IDisposable
         _jitterTolerancePx = jitterTolerancePx;
 
         _mouseHook.MouseMoved += OnMouseMoved;
+    }
+
+    public void UpdateSettings(int hoverThresholdMs, int jitterTolerancePx)
+    {
+        _hoverThresholdMs = hoverThresholdMs;
+        _jitterTolerancePx = jitterTolerancePx;
     }
 
     private void OnMouseMoved(int x, int y)

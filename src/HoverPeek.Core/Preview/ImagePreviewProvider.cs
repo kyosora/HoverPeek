@@ -1,3 +1,4 @@
+using HoverPeek.Core.Localization;
 using SkiaSharp;
 
 namespace HoverPeek.Core.Preview;
@@ -11,11 +12,16 @@ public sealed class ImagePreviewProvider : IPreviewProvider
         ".ico", ".tiff", ".tif", ".avif"
     };
 
-    private readonly int _maxPreviewDimension;
+    private int _maxPreviewDimension;
 
     public ImagePreviewProvider(int maxPreviewDimension = 800)
     {
         _maxPreviewDimension = maxPreviewDimension;
+    }
+
+    public void UpdateSettings(int maxDimension)
+    {
+        _maxPreviewDimension = maxDimension;
     }
 
     public bool CanHandle(string filePath)
@@ -31,28 +37,28 @@ public sealed class ImagePreviewProvider : IPreviewProvider
         {
             if (!File.Exists(filePath))
             {
-                throw new FileNotFoundException($"檔案不存在: {filePath}");
+                throw new FileNotFoundException(Strings.Format("FileNotFound", filePath));
             }
 
             var bytes = await File.ReadAllBytesAsync(filePath, ct);
 
             if (bytes == null || bytes.Length == 0)
             {
-                throw new InvalidOperationException($"檔案是空的: {filePath}");
+                throw new InvalidOperationException(Strings.Format("FileEmpty", filePath));
             }
 
             var result = GenerateFromBytes(bytes);
 
             if (result.Kind == PreviewKind.Unsupported)
             {
-                throw new NotSupportedException($"無法解碼圖片。檔案: {filePath}, 大小: {bytes.Length} bytes");
+                throw new NotSupportedException(Strings.Format("CannotDecodeImage", filePath, bytes.Length));
             }
 
             return result;
         }
         catch (Exception ex)
         {
-            throw new Exception($"GeneratePreviewAsync 失敗: {filePath}", ex);
+            throw new Exception(Strings.Format("GeneratePreviewFailed", filePath), ex);
         }
     }
 
@@ -71,8 +77,8 @@ public sealed class ImagePreviewProvider : IPreviewProvider
             {
                 var header = rawBytes.Length >= 16
                     ? BitConverter.ToString(rawBytes.Take(16).ToArray())
-                    : "檔案太小";
-                throw new NotSupportedException($"SKCodec.Create 返回 null。檔案大小: {rawBytes.Length} bytes, 前 16 bytes: {header}");
+                    : Strings.FileTooSmallHeader;
+                throw new NotSupportedException(Strings.Format("SKCodecNull", rawBytes.Length, header));
             }
 
             var info = codec.Info;
@@ -95,7 +101,7 @@ public sealed class ImagePreviewProvider : IPreviewProvider
 
             if (originalBitmap == null)
             {
-                throw new InvalidOperationException($"SKBitmap.Decode 返回 null。原始尺寸: {info.Width}x{info.Height}");
+                throw new InvalidOperationException(Strings.Format("SKBitmapDecodeNull", info.Width, info.Height));
             }
 
             var scale = CalculateScale(originalBitmap.Width, originalBitmap.Height);
@@ -110,7 +116,7 @@ public sealed class ImagePreviewProvider : IPreviewProvider
 
                 if (finalBitmap == null)
                 {
-                    throw new InvalidOperationException($"Resize 返回 null。原始: {originalBitmap.Width}x{originalBitmap.Height}, 縮放後: {scaledWidth}x{scaledHeight}");
+                    throw new InvalidOperationException(Strings.Format("ResizeNull", originalBitmap.Width, originalBitmap.Height, scaledWidth, scaledHeight));
                 }
             }
             else
@@ -137,7 +143,7 @@ public sealed class ImagePreviewProvider : IPreviewProvider
         }
         catch (Exception ex)
         {
-            throw new Exception($"GenerateFromBytes 失敗。位元組數: {rawBytes?.Length ?? 0}", ex);
+            throw new Exception(Strings.Format("GenerateFromBytesFailed", rawBytes?.Length ?? 0), ex);
         }
     }
 

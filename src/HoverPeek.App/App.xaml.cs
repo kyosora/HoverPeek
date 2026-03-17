@@ -1,5 +1,6 @@
-﻿using System.Windows;
+using System.Windows;
 using HoverPeek.Core.FileResolver;
+using HoverPeek.Core.Localization;
 using HoverPeek.Core.MouseHook;
 using HoverPeek.Core.Preview;
 using HoverPeek.Core.Settings;
@@ -22,8 +23,8 @@ public partial class App : System.Windows.Application
     private VideoPreviewProvider? _videoProvider;
     private TextPreviewProvider? _textProvider;
     private SettingsService? _settingsService;
-    private bool _previewLocked = false;  // 預覽鎖定標記
-    private WinForms.NotifyIcon? _notifyIcon;  // 系統托盤圖示
+    private bool _previewLocked = false;
+    private WinForms.NotifyIcon? _notifyIcon;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -33,24 +34,28 @@ public partial class App : System.Windows.Application
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
+        // 載入設定並初始化語言
+        _settingsService = new SettingsService();
+        var settings = _settingsService.Current;
+        LocaleManager.SetLanguage(settings.Language);
+
         // 建立系統托盤圖示
         _notifyIcon = new WinForms.NotifyIcon
         {
             Icon = LoadAppIcon(),
             Visible = true,
-            Text = "HoverPeek - 檔案預覽工具"
+            Text = Strings.TrayTooltip
         };
 
-        // 建立右鍵選單
         var contextMenu = new WinForms.ContextMenuStrip();
 
-        var settingsItem = new WinForms.ToolStripMenuItem("設定");
+        var settingsItem = new WinForms.ToolStripMenuItem(Strings.TraySettings);
         settingsItem.Click += (s, args) => OpenSettingsWindow();
         contextMenu.Items.Add(settingsItem);
 
         contextMenu.Items.Add(new WinForms.ToolStripSeparator());
 
-        var exitItem = new WinForms.ToolStripMenuItem("退出 HoverPeek");
+        var exitItem = new WinForms.ToolStripMenuItem(Strings.TrayExitApp);
         exitItem.Click += (s, args) =>
         {
             _notifyIcon.Visible = false;
@@ -59,19 +64,14 @@ public partial class App : System.Windows.Application
         contextMenu.Items.Add(exitItem);
         _notifyIcon.ContextMenuStrip = contextMenu;
 
-        // 雙擊托盤圖示可以開啟設定視窗（未來可擴充）
         _notifyIcon.DoubleClick += (s, args) =>
         {
             MessageBox.Show(
-                "HoverPeek 正在背景運作中\n\n懸停在檔案總管的圖片、壓縮檔、影片上即可預覽",
-                "HoverPeek",
+                Strings.TrayRunningMessage,
+                Strings.TrayRunningTitle,
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
         };
-
-        // 載入設定
-        _settingsService = new SettingsService();
-        var settings = _settingsService.Current;
 
         // 使用設定初始化 Providers
         _imageProvider = new ImagePreviewProvider(settings.ImageMaxDimension);
@@ -92,9 +92,16 @@ public partial class App : System.Windows.Application
         _hoverDetector.HoverEnded += OnHoverEnded;
 
         _previewWindow = new PreviewWindow(OnImageInArchiveHover);
+        _previewWindow.UpdateSettings(
+            settings.WindowWidth, settings.WindowHeight,
+            settings.CenterWindow,
+            settings.FadeInDurationMs, settings.FadeOutDurationMs);
 
         _previewWindow.Show();
         _previewWindow.Hide();
+
+        // 訂閱設定變更事件
+        _settingsService.SettingsChanged += OnSettingsChanged;
 
         try
         {
@@ -103,8 +110,8 @@ public partial class App : System.Windows.Application
         catch (Exception ex)
         {
             MessageBox.Show(
-                $"無法安裝滑鼠 Hook：{ex.Message}\n\n請確認應用程式有足夠的權限。",
-                "HoverPeek 啟動失敗",
+                Strings.Format("MouseHookFailed", ex.Message),
+                Strings.StartupFailedTitle,
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
             _notifyIcon.Visible = false;
@@ -112,12 +119,27 @@ public partial class App : System.Windows.Application
         }
     }
 
+    private void OnSettingsChanged(AppSettings settings)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            _hoverDetector?.UpdateSettings(settings.HoverDelayMs, settings.JitterTolerancePx);
+            _imageProvider?.UpdateSettings(settings.ImageMaxDimension);
+            _svgProvider?.UpdateSettings(settings.ImageMaxDimension);
+            _textProvider?.UpdateSettings(
+                settings.TextMaxFileSizeMB * 1024 * 1024,
+                settings.TextMaxLines);
+            _previewWindow?.UpdateSettings(
+                settings.WindowWidth, settings.WindowHeight,
+                settings.CenterWindow,
+                settings.FadeInDurationMs, settings.FadeOutDurationMs);
+        });
+    }
+
     private async void OnHoverStarted(int x, int y)
     {
         await Dispatcher.InvokeAsync(async () =>
         {
-            // 如果預覽已鎖定，忽略所有新的懸停事件
-            // 這樣使用者就能安全地在檔案列表間移動滑鼠，不會觸發新預覽
             if (_previewLocked)
             {
                 return;
@@ -152,24 +174,24 @@ public partial class App : System.Windows.Application
             {
                 var preview = await provider.GeneratePreviewAsync(filePath);
                 _previewWindow?.ShowPreview(preview, filePath, x, y);
-                _previewLocked = true;  // 顯示預覽後立即鎖定
+                _previewLocked = true;
             }
             catch (Exception ex)
             {
-                var errorMsg = $"預覽圖片時發生錯誤：\n\n檔案：{filePath}\n\n";
+                var errorMsg = Strings.Format("PreviewErrorMessage", filePath);
 
                 var currentEx = ex;
                 var depth = 0;
                 while (currentEx != null && depth < 5)
                 {
-                    errorMsg += $"\n[錯誤 {depth + 1}] {currentEx.GetType().Name}\n{currentEx.Message}\n";
+                    errorMsg += $"\n{Strings.Format("ErrorLabel", depth + 1)} {currentEx.GetType().Name}\n{currentEx.Message}\n";
                     currentEx = currentEx.InnerException;
                     depth++;
                 }
 
-                errorMsg += $"\n完整堆疊：\n{ex}";
+                errorMsg += Strings.Format("FullStackTrace", ex);
 
-                MessageBox.Show(errorMsg, "HoverPeek 預覽錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(errorMsg, Strings.PreviewErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
                 _previewWindow?.Hide();
             }
         });
@@ -184,7 +206,7 @@ public partial class App : System.Windows.Application
             if (_previewWindow != null && !_previewWindow.IsMouseInside)
             {
                 _previewWindow.Hide();
-                _previewLocked = false;  // 關閉視窗後解除鎖定
+                _previewLocked = false;
             }
         });
     }
@@ -232,6 +254,9 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        if (_settingsService != null)
+            _settingsService.SettingsChanged -= OnSettingsChanged;
+
         _notifyIcon?.Dispose();
         _hoverDetector?.Dispose();
         _mouseHook?.Dispose();
@@ -240,23 +265,22 @@ public partial class App : System.Windows.Application
 
     private void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
     {
-        var errorMessage = $"發生未處理的例外：\n\n{e.Exception.GetType().Name}\n{e.Exception.Message}\n\n堆疊追蹤：\n{e.Exception.StackTrace}";
-        MessageBox.Show(errorMessage, "HoverPeek 錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+        var errorMessage = Strings.Format("UnhandledExceptionMessage", e.Exception.GetType().Name, e.Exception.Message, e.Exception.StackTrace);
+        MessageBox.Show(errorMessage, Strings.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true;
     }
 
     private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
         var exception = e.ExceptionObject as Exception;
-        var errorMessage = $"發生致命錯誤：\n\n{exception?.GetType().Name}\n{exception?.Message}\n\n堆疊追蹤：\n{exception?.StackTrace}";
-        MessageBox.Show(errorMessage, "HoverPeek 致命錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+        var errorMessage = Strings.Format("FatalErrorMessage", exception?.GetType().Name, exception?.Message, exception?.StackTrace);
+        MessageBox.Show(errorMessage, Strings.FatalErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
-        var errorMessage = $"Task 未觀察例外：\n\n{e.Exception.GetType().Name}\n{e.Exception.Message}\n\n堆疊追蹤：\n{e.Exception.StackTrace}";
-        MessageBox.Show(errorMessage, "HoverPeek Task 錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+        var errorMessage = Strings.Format("TaskExceptionMessage", e.Exception.GetType().Name, e.Exception.Message, e.Exception.StackTrace);
+        MessageBox.Show(errorMessage, Strings.TaskErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         e.SetObserved();
     }
 }
-

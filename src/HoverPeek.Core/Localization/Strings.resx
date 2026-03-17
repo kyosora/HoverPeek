@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Core - Error messages -->
+  <data name="FileNotFound" xml:space="preserve">
+    <value>檔案不存在: {0}</value>
+  </data>
+  <data name="FileEmpty" xml:space="preserve">
+    <value>檔案是空的: {0}</value>
+  </data>
+  <data name="CannotDecodeImage" xml:space="preserve">
+    <value>無法解碼圖片。檔案: {0}, 大小: {1} bytes</value>
+  </data>
+  <data name="FileTooSmallHeader" xml:space="preserve">
+    <value>檔案太小</value>
+  </data>
+  <data name="SKCodecNull" xml:space="preserve">
+    <value>SKCodec.Create 返回 null。檔案大小: {0} bytes, 前 16 bytes: {1}</value>
+  </data>
+  <data name="SKBitmapDecodeNull" xml:space="preserve">
+    <value>SKBitmap.Decode 返回 null。原始尺寸: {0}x{1}</value>
+  </data>
+  <data name="ResizeNull" xml:space="preserve">
+    <value>Resize 返回 null。原始: {0}x{1}, 縮放後: {2}x{3}</value>
+  </data>
+  <data name="GeneratePreviewFailed" xml:space="preserve">
+    <value>GeneratePreviewAsync 失敗: {0}</value>
+  </data>
+  <data name="GenerateFromBytesFailed" xml:space="preserve">
+    <value>GenerateFromBytes 失敗。位元組數: {0}</value>
+  </data>
+  <data name="SvgFileEmpty" xml:space="preserve">
+    <value>SVG 檔案是空的: {0}</value>
+  </data>
+  <data name="CannotLoadSvg" xml:space="preserve">
+    <value>無法載入 SVG 內容</value>
+  </data>
+  <data name="SvgInvalidSize" xml:space="preserve">
+    <value>SVG 尺寸無效: {0}x{1}</value>
+  </data>
+  <data name="GenerateSvgFailed" xml:space="preserve">
+    <value>GenerateFromSvgContent 失敗</value>
+  </data>
+  <data name="ReadTextFailed" xml:space="preserve">
+    <value>讀取文字檔案失敗: {0}</value>
+  </data>
+  <data name="SaveSettingsFailed" xml:space="preserve">
+    <value>儲存設定失敗: {0}</value>
+  </data>
+
+  <!-- Core - User-facing text -->
+  <data name="FileTooLargeTitle" xml:space="preserve">
+    <value>檔案過大無法預覽</value>
+  </data>
+  <data name="FileSizeLabel" xml:space="preserve">
+    <value>檔案大小: {0}</value>
+  </data>
+  <data name="MaxSizeLabel" xml:space="preserve">
+    <value>最大支援: {0}</value>
+  </data>
+  <data name="TruncatedMessage" xml:space="preserve">
+    <value>... (已截斷，僅顯示前 {0} 行，共 {1} 行)</value>
+  </data>
+
+  <!-- UI - PreviewWindow -->
+  <data name="ExpandFileList" xml:space="preserve">
+    <value>展開檔案列表</value>
+  </data>
+  <data name="CollapseFileList" xml:space="preserve">
+    <value>收起檔案列表</value>
+  </data>
+  <data name="ArchiveItemCount" xml:space="preserve">
+    <value>{0} 個項目</value>
+  </data>
+  <data name="UnsupportedFileType" xml:space="preserve">
+    <value>不支援預覽此檔案類型</value>
+  </data>
+  <data name="VideoCannotPlay" xml:space="preserve">
+    <value>影片無法播放</value>
+  </data>
+  <data name="HeaderName" xml:space="preserve">
+    <value>名稱</value>
+  </data>
+  <data name="HeaderSize" xml:space="preserve">
+    <value>大小</value>
+  </data>
+  <data name="HeaderType" xml:space="preserve">
+    <value>類型</value>
+  </data>
+  <data name="EncodingUnknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+
+  <!-- App - System tray -->
+  <data name="TrayTooltip" xml:space="preserve">
+    <value>HoverPeek - 檔案預覽工具</value>
+  </data>
+  <data name="TraySettings" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="TrayExitApp" xml:space="preserve">
+    <value>退出 HoverPeek</value>
+  </data>
+  <data name="TrayRunningTitle" xml:space="preserve">
+    <value>HoverPeek</value>
+  </data>
+  <data name="TrayRunningMessage" xml:space="preserve">
+    <value>HoverPeek 正在背景運作中
+
+懸停在檔案總管的圖片、壓縮檔、影片上即可預覽</value>
+  </data>
+  <data name="MouseHookFailed" xml:space="preserve">
+    <value>無法安裝滑鼠 Hook：{0}
+
+請確認應用程式有足夠的權限。</value>
+  </data>
+  <data name="StartupFailedTitle" xml:space="preserve">
+    <value>HoverPeek 啟動失敗</value>
+  </data>
+
+  <!-- App - Preview errors -->
+  <data name="PreviewErrorTitle" xml:space="preserve">
+    <value>HoverPeek 預覽錯誤</value>
+  </data>
+  <data name="PreviewErrorMessage" xml:space="preserve">
+    <value>預覽圖片時發生錯誤：
+
+檔案：{0}
+
+</value>
+  </data>
+  <data name="ErrorLabel" xml:space="preserve">
+    <value>[錯誤 {0}]</value>
+  </data>
+  <data name="FullStackTrace" xml:space="preserve">
+    <value>
+完整堆疊：
+{0}</value>
+  </data>
+
+  <!-- App - Unhandled exceptions -->
+  <data name="UnhandledExceptionMessage" xml:space="preserve">
+    <value>發生未處理的例外：
+
+{0}
+{1}
+
+堆疊追蹤：
+{2}</value>
+  </data>
+  <data name="FatalErrorMessage" xml:space="preserve">
+    <value>發生致命錯誤：
+
+{0}
+{1}
+
+堆疊追蹤：
+{2}</value>
+  </data>
+  <data name="TaskExceptionMessage" xml:space="preserve">
+    <value>Task 未觀察例外：
+
+{0}
+{1}
+
+堆疊追蹤：
+{2}</value>
+  </data>
+  <data name="ErrorTitle" xml:space="preserve">
+    <value>HoverPeek 錯誤</value>
+  </data>
+  <data name="FatalErrorTitle" xml:space="preserve">
+    <value>HoverPeek 致命錯誤</value>
+  </data>
+  <data name="TaskErrorTitle" xml:space="preserve">
+    <value>HoverPeek Task 錯誤</value>
+  </data>
+
+  <!-- Settings window -->
+  <data name="SettingsWindowTitle" xml:space="preserve">
+    <value>HoverPeek 設定</value>
+  </data>
+  <data name="TabHoverBehavior" xml:space="preserve">
+    <value>懸停行為</value>
+  </data>
+  <data name="TabPreviewWindow" xml:space="preserve">
+    <value>預覽視窗</value>
+  </data>
+  <data name="TabImagePreview" xml:space="preserve">
+    <value>圖片預覽</value>
+  </data>
+  <data name="TabTextPreview" xml:space="preserve">
+    <value>文字預覽</value>
+  </data>
+  <data name="TabVideoPreview" xml:space="preserve">
+    <value>影片預覽</value>
+  </data>
+  <data name="TabArchivePreview" xml:space="preserve">
+    <value>壓縮檔預覽</value>
+  </data>
+  <data name="TabStartup" xml:space="preserve">
+    <value>啟動設定</value>
+  </data>
+
+  <!-- Settings - Hover behavior -->
+  <data name="LabelHoverDelay" xml:space="preserve">
+    <value>懸停延遲（毫秒）</value>
+  </data>
+  <data name="LabelJitterTolerance" xml:space="preserve">
+    <value>抖動容忍度（像素）</value>
+  </data>
+  <data name="LabelAutoCloseDelay" xml:space="preserve">
+    <value>自動關閉延遲（毫秒）</value>
+  </data>
+  <data name="DescriptionLabel" xml:space="preserve">
+    <value>說明：</value>
+  </data>
+  <data name="DescHoverDelay" xml:space="preserve">
+    <value>&#x2022; 懸停延遲：滑鼠停留多久後顯示預覽</value>
+  </data>
+  <data name="DescJitterTolerance" xml:space="preserve">
+    <value>&#x2022; 抖動容忍度：滑鼠輕微移動不會中斷計時</value>
+  </data>
+  <data name="DescAutoCloseDelay" xml:space="preserve">
+    <value>&#x2022; 自動關閉延遲：滑鼠離開檔案後多久關閉預覽</value>
+  </data>
+
+  <!-- Settings - Preview window -->
+  <data name="LabelWindowWidth" xml:space="preserve">
+    <value>視窗寬度（像素）</value>
+  </data>
+  <data name="LabelWindowHeight" xml:space="preserve">
+    <value>視窗高度（像素）</value>
+  </data>
+  <data name="LabelCenterWindow" xml:space="preserve">
+    <value>固定在螢幕中央（否則跟隨滑鼠）</value>
+  </data>
+  <data name="LabelFadeInDuration" xml:space="preserve">
+    <value>淡入動畫時間（毫秒）</value>
+  </data>
+  <data name="LabelFadeOutDuration" xml:space="preserve">
+    <value>淡出動畫時間（毫秒）</value>
+  </data>
+
+  <!-- Settings - Image preview -->
+  <data name="LabelImageMaxDimension" xml:space="preserve">
+    <value>最大預覽尺寸（像素）</value>
+  </data>
+  <data name="LabelEnableGifAnimation" xml:space="preserve">
+    <value>播放 GIF 動畫</value>
+  </data>
+  <data name="DescImageScale" xml:space="preserve">
+    <value>&#x2022; 大圖片會自動縮放到此尺寸以內</value>
+  </data>
+  <data name="DescGifStatic" xml:space="preserve">
+    <value>&#x2022; 取消勾選 GIF 動畫可顯示第一幀靜態圖</value>
+  </data>
+
+  <!-- Settings - Text preview -->
+  <data name="LabelTextMaxFileSize" xml:space="preserve">
+    <value>最大檔案大小（MB）</value>
+  </data>
+  <data name="LabelTextMaxLines" xml:space="preserve">
+    <value>最大顯示行數</value>
+  </data>
+  <data name="LabelTextFontSize" xml:space="preserve">
+    <value>字型大小</value>
+  </data>
+  <data name="LabelTextFontFamily" xml:space="preserve">
+    <value>字型家族</value>
+  </data>
+  <data name="LabelEnableMarkdownRendering" xml:space="preserve">
+    <value>啟用 Markdown 渲染</value>
+  </data>
+  <data name="LabelEnableSyntaxHighlighting" xml:space="preserve">
+    <value>啟用語法高亮</value>
+  </data>
+  <data name="DescMarkdownRendering" xml:space="preserve">
+    <value>&#x2022; Markdown 渲染會將 .md 檔案顯示為格式化的網頁</value>
+  </data>
+  <data name="DescSyntaxHighlighting" xml:space="preserve">
+    <value>&#x2022; 語法高亮會為程式碼檔案加上顏色標記</value>
+  </data>
+
+  <!-- Settings - Video preview -->
+  <data name="LabelVideoAutoPlay" xml:space="preserve">
+    <value>自動播放影片</value>
+  </data>
+  <data name="LabelVideoMuted" xml:space="preserve">
+    <value>靜音播放</value>
+  </data>
+  <data name="DescVideoThumbnail" xml:space="preserve">
+    <value>&#x2022; 取消自動播放可顯示影片縮圖</value>
+  </data>
+  <data name="DescVideoMuted" xml:space="preserve">
+    <value>&#x2022; 建議保持靜音以避免干擾</value>
+  </data>
+
+  <!-- Settings - Archive preview -->
+  <data name="LabelArchiveAutoExpand" xml:space="preserve">
+    <value>自動展開檔案列表</value>
+  </data>
+  <data name="DescArchiveAutoExpand" xml:space="preserve">
+    <value>&#x2022; 自動展開會在預覽時直接顯示壓縮檔內容</value>
+  </data>
+  <data name="DescArchiveManual" xml:space="preserve">
+    <value>&#x2022; 取消勾選可手動點擊「展開檔案列表」按鈕</value>
+  </data>
+
+  <!-- Settings - Startup -->
+  <data name="LabelStartWithWindows" xml:space="preserve">
+    <value>開機時自動啟動</value>
+  </data>
+  <data name="DescStartup" xml:space="preserve">
+    <value>&#x2022; 勾選後會在 Windows 啟動時自動執行 HoverPeek</value>
+  </data>
+  <data name="DescTrayMinimize" xml:space="preserve">
+    <value>&#x2022; 程式會最小化到系統托盤運作</value>
+  </data>
+
+  <!-- Settings - Language -->
+  <data name="LabelLanguage" xml:space="preserve">
+    <value>介面語言</value>
+  </data>
+  <data name="LanguageZhTW" xml:space="preserve">
+    <value>繁體中文</value>
+  </data>
+  <data name="LanguageEn" xml:space="preserve">
+    <value>English</value>
+  </data>
+
+  <!-- Settings - Buttons -->
+  <data name="ButtonReset" xml:space="preserve">
+    <value>重設為預設值</value>
+  </data>
+  <data name="ButtonCancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="ButtonSave" xml:space="preserve">
+    <value>儲存</value>
+  </data>
+
+  <!-- Settings - Messages -->
+  <data name="SaveSuccessMessage" xml:space="preserve">
+    <value>設定已儲存！</value>
+  </data>
+  <data name="SaveSuccessLanguageChanged" xml:space="preserve">
+    <value>語言設定已變更，需要重新啟動 HoverPeek 才會生效。</value>
+  </data>
+  <data name="SaveErrorMessage" xml:space="preserve">
+    <value>儲存設定失敗：
+
+{0}</value>
+  </data>
+  <data name="SaveErrorTitle" xml:space="preserve">
+    <value>HoverPeek 錯誤</value>
+  </data>
+  <data name="ResetConfirmMessage" xml:space="preserve">
+    <value>確定要重設為預設值嗎？
+
+這將會清除所有自訂設定。</value>
+  </data>
+</root>
