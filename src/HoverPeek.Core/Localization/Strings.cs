@@ -41,6 +41,8 @@ public static class Strings
     public static string ExpandFileList => Get(nameof(ExpandFileList));
     public static string CollapseFileList => Get(nameof(CollapseFileList));
     public static string ArchiveItemCount => Get(nameof(ArchiveItemCount));
+    public static string FolderItemCount => Get(nameof(FolderItemCount));
+    public static string FolderBack => Get(nameof(FolderBack));
     public static string UnsupportedFileType => Get(nameof(UnsupportedFileType));
     public static string VideoCannotPlay => Get(nameof(VideoCannotPlay));
     public static string HeaderName => Get(nameof(HeaderName));
@@ -126,6 +128,14 @@ public static class Strings
     public static string LabelLanguage => Get(nameof(LabelLanguage));
     public static string LanguageZhTW => Get(nameof(LanguageZhTW));
     public static string LanguageEn => Get(nameof(LanguageEn));
+
+    // About
+    public static string TabAbout => Get(nameof(TabAbout));
+    public static string AboutDescription => Get(nameof(AboutDescription));
+    public static string AboutAuthorLabel => Get(nameof(AboutAuthorLabel));
+    public static string AboutGitHubLabel => Get(nameof(AboutGitHubLabel));
+    public static string AboutLicenseLabel => Get(nameof(AboutLicenseLabel));
+    public static string AboutFrameworkLabel => Get(nameof(AboutFrameworkLabel));
 
     // Settings - Buttons
     public static string ButtonReset => Get(nameof(ButtonReset));

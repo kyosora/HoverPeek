@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Navigation;
 using HoverPeek.Core.Localization;
 using HoverPeek.Core.Settings;
 using Microsoft.Win32;
@@ -18,6 +19,7 @@ public partial class SettingsWindow : Window
         _settingsService = settingsService;
         _currentSettings = _settingsService.Current;
         LoadSettingsToUI();
+        LoadAboutInfo();
     }
 
     private void LoadSettingsToUI()
@@ -165,6 +167,26 @@ public partial class SettingsWindow : Window
             _currentSettings = AppSettings.Default;
             LoadSettingsToUI();
         }
+    }
+
+    private void LoadAboutInfo()
+    {
+        var version = typeof(SettingsWindow).Assembly.GetName().Version;
+        var versionText = version != null ? $"v{version.Major}.{version.Minor}.{version.Build}" : "v1.0.0";
+
+        AboutAppName.Text = "HoverPeek";
+        AboutVersion.Text = versionText;
+        AboutFramework.Text = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
+    }
+
+    private void OnHyperlinkNavigate(object sender, RequestNavigateEventArgs e)
+    {
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = e.Uri.AbsoluteUri,
+            UseShellExecute = true
+        });
+        e.Handled = true;
     }
 
     private void SetStartupRegistry(bool enable)

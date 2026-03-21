@@ -7,6 +7,7 @@
         xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
         xmlns:loc="clr-namespace:HoverPeek.Core.Localization;assembly=HoverPeek.Core"
         Title="HoverPeek"
+        Icon="pack://application:,,,/HoverPeek;component/HoverPeek.ico"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -59,6 +60,14 @@
                            TextWrapping="Wrap"
                            MaxWidth="800"/>
 
+                <Button x:Name="BackButton"
+                        Content="{x:Static loc:Strings.FolderBack}"
+                        Padding="8,4"
+                        Margin="0,0,0,8"
+                        Click="OnBackClick"
+                        HorizontalAlignment="Left"
+                        Visibility="Collapsed"/>
+
                 <Button x:Name="ExpandButton"
                         Content="{x:Static loc:Strings.ExpandFileList}"
                         Padding="12,6"
@@ -79,7 +88,8 @@
                               MaxHeight="500"
                               MinWidth="420"
                               SelectionMode="Single"
-                              MouseMove="OnFileListMouseMove">
+                              MouseMove="OnFileListMouseMove"
+                              MouseDoubleClick="OnFileListDoubleClick">
                         <ListView.View>
                             <GridView>
                                 <GridViewColumn Header="{x:Static loc:Strings.HeaderName}" Width="250">

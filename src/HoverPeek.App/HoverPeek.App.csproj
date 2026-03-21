@@ -10,10 +10,12 @@
     <ApplicationIcon>HoverPeek.ico</ApplicationIcon>
     <AssemblyName>HoverPeek</AssemblyName>
     <Product>HoverPeek</Product>
+    <Version>1.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <Content Include="HoverPeek.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Resource Include="HoverPeek.ico" />
   </ItemGroup>
 
   <ItemGroup>

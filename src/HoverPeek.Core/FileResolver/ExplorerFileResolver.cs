@@ -13,6 +13,12 @@ namespace HoverPeek.Core.FileResolver;
 /// </summary>
 public sealed class ExplorerFileResolver
 {
+    // 快取：同一個 Explorer 視窗的資料夾路徑短時間內不會變
+    private int _cachedWindowHandle;
+    private string? _cachedFolderPath;
+    private DateTime _cachedAt;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(3);
+
     public string? ResolveFileAtPoint(int screenX, int screenY)
     {
         try
@@ -31,7 +37,7 @@ public sealed class ExplorerFileResolver
             if (string.IsNullOrEmpty(fileName))
                 return null;
 
-            var folderPath = GetCurrentExplorerFolder(fileElement);
+            var folderPath = GetCurrentExplorerFolderCached(fileElement);
             if (string.IsNullOrEmpty(folderPath))
                 return null;
 
@@ -46,6 +52,43 @@ public sealed class ExplorerFileResolver
         {
             return null;
         }
+    }
+
+    private string? GetCurrentExplorerFolderCached(AutomationElement listItem)
+    {
+        // 先找到所屬的 Explorer 視窗，取得 HWND
+        var walker = TreeWalker.ControlViewWalker;
+        var current = listItem;
+        while (current != null &&
+               current.Current.ClassName != "CabinetWClass" &&
+               current.Current.ClassName != "ExploreWClass")
+        {
+            current = walker.GetParent(current);
+        }
+
+        if (current == null)
+            return null;
+
+        var hwnd = current.Current.NativeWindowHandle;
+
+        // 快取命中：同一個視窗 + 未過期
+        if (hwnd == _cachedWindowHandle &&
+            _cachedFolderPath != null &&
+            DateTime.UtcNow - _cachedAt < CacheTtl)
+        {
+            return _cachedFolderPath;
+        }
+
+        // 快取未命中，重新查詢
+        var folderPath = GetFolderPathFromExplorerWindow(current);
+        if (folderPath != null)
+        {
+            _cachedWindowHandle = hwnd;
+            _cachedFolderPath = folderPath;
+            _cachedAt = DateTime.UtcNow;
+        }
+
+        return folderPath;
     }
 
     private static AutomationElement? FindFileElement(AutomationElement element)
@@ -107,22 +150,15 @@ public sealed class ExplorerFileResolver
         return false;
     }
 
-    private static string? GetCurrentExplorerFolder(AutomationElement listItem)
+    private static string? GetFolderPathFromExplorerWindow(AutomationElement explorerWindow)
     {
-        var walker = TreeWalker.ControlViewWalker;
-        var current = listItem;
+        // 先嘗試用 Shell COM 取得路徑（比 UI Automation 搜尋快很多）
+        var comPath = GetFolderPathViaCom(explorerWindow);
+        if (!string.IsNullOrEmpty(comPath))
+            return comPath;
 
-        while (current != null &&
-               current.Current.ClassName != "CabinetWClass" &&
-               current.Current.ClassName != "ExploreWClass")
-        {
-            current = walker.GetParent(current);
-        }
-
-        if (current == null)
-            return null;
-
-        var addressBar = current.FindFirst(
+        // fallback: 從地址列取得
+        var addressBar = explorerWindow.FindFirst(
             TreeScope.Descendants,
             new PropertyCondition(
                 AutomationElement.AutomationIdProperty, "1001"));
@@ -142,7 +178,7 @@ public sealed class ExplorerFileResolver
             }
         }
 
-        return GetFolderPathViaCom(current);
+        return null;
     }
 
     private static string? GetFolderPathViaCom(AutomationElement explorerWindow)

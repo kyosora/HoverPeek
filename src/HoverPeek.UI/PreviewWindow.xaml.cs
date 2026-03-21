@@ -21,9 +21,16 @@ public partial class PreviewWindow : Window
     private const int WS_EX_TOOLWINDOW = 0x00000080;
 
     private string? _currentArchivePath;
+    private PreviewKind _currentListKind;
     private IReadOnlyList<ArchiveEntry>? _currentEntries;
     private readonly System.Action<string, string>? _onImageInArchiveHover;
+    private readonly System.Action<string, System.Action<PreviewResult>>? _onFolderNavigate;
+    private readonly System.Action<string, System.Action<PreviewResult>>? _onFilePreviewRequested;
     private bool _isMouseInside;
+
+    private readonly Stack<string> _folderHistory = new();
+    private string? _currentFolderPath;
+    private bool _isPreviewingFileInFolder;
 
     private LibVLC? _libVLC;
     private LibVLCSharp.Shared.MediaPlayer? _mediaPlayer;
@@ -32,16 +39,23 @@ public partial class PreviewWindow : Window
     private double _windowHeight = 600;
     private bool _centerWindow = true;
 
-    public PreviewWindow(System.Action<string, string>? onImageInArchiveHover = null)
+    public PreviewWindow(
+        System.Action<string, string>? onImageInArchiveHover = null,
+        System.Action<string, System.Action<PreviewResult>>? onFolderNavigate = null,
+        System.Action<string, System.Action<PreviewResult>>? onFilePreviewRequested = null)
     {
         InitializeComponent();
         _onImageInArchiveHover = onImageInArchiveHover;
+        _onFolderNavigate = onFolderNavigate;
+        _onFilePreviewRequested = onFilePreviewRequested;
 
         MouseEnter += (s, e) => _isMouseInside = true;
         MouseLeave += (s, e) => _isMouseInside = false;
     }
 
     public bool IsMouseInside => _isMouseInside;
+
+    public event System.Action? PreviewMouseLeft;
 
     public void UpdateSettings(double width, double height, bool centerWindow, int fadeInMs, int fadeOutMs)
     {
@@ -97,6 +111,9 @@ public partial class PreviewWindow : Window
             case PreviewKind.Archive:
                 ShowArchivePreview(result, filePath);
                 break;
+            case PreviewKind.Folder:
+                ShowFolderPreview(result, filePath);
+                break;
             case PreviewKind.Video:
                 ShowVideoPreview(result);
                 break;
@@ -140,9 +157,38 @@ public partial class PreviewWindow : Window
     private void ShowArchivePreview(PreviewResult result, string archivePath)
     {
         _currentArchivePath = archivePath;
+        _currentListKind = PreviewKind.Archive;
         _currentEntries = result.Entries;
 
         ArchiveTitle.Text = $"\U0001f4e6 {System.IO.Path.GetFileName(archivePath)} ({Strings.Format("ArchiveItemCount", result.Entries?.Count ?? 0)})";
+        ArchivePanel.Visibility = Visibility.Visible;
+        ExpandButton.Visibility = Visibility.Visible;
+
+        var contentGrid = (Grid)ArchivePanel.FindName("ContentGrid");
+        if (contentGrid != null)
+        {
+            var displayItems = _currentEntries?
+                .Select(entry => new ArchiveDisplayItem(entry))
+                .ToList();
+
+            FileListView.ItemsSource = displayItems;
+            contentGrid.Visibility = Visibility.Visible;
+            ExpandButton.Content = Strings.CollapseFileList;
+        }
+
+        InnerImagePreview.Visibility = Visibility.Collapsed;
+    }
+
+    private void ShowFolderPreview(PreviewResult result, string folderPath)
+    {
+        _currentArchivePath = folderPath;
+        _currentListKind = PreviewKind.Folder;
+        _currentEntries = result.Entries;
+        _currentFolderPath = folderPath;
+        _folderHistory.Clear();
+        BackButton.Visibility = Visibility.Collapsed;
+
+        ArchiveTitle.Text = $"\U0001f4c1 {System.IO.Path.GetFileName(folderPath)} ({Strings.Format("FolderItemCount", result.Entries?.Count ?? 0)})";
         ArchivePanel.Visibility = Visibility.Visible;
         ExpandButton.Visibility = Visibility.Visible;
 
@@ -282,6 +328,11 @@ public partial class PreviewWindow : Window
         MarkdownWebView.Visibility = Visibility.Collapsed;
         CodeEditorPanel.Visibility = Visibility.Collapsed;
         UnsupportedText.Visibility = Visibility.Collapsed;
+        BackButton.Visibility = Visibility.Collapsed;
+
+        _folderHistory.Clear();
+        _currentFolderPath = null;
+        _isPreviewingFileInFolder = false;
 
         ImagePreview.Source = null;
         WpfAnimatedGif.ImageBehavior.SetAnimatedSource(ImagePreview, null);
@@ -322,6 +373,146 @@ public partial class PreviewWindow : Window
         }
     }
 
+    private void OnFileListDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_currentListKind != PreviewKind.Folder)
+            return;
+
+        var pos = e.GetPosition(FileListView);
+        var element = FileListView.InputHitTest(pos) as DependencyObject;
+
+        while (element != null && element is not System.Windows.Controls.ListViewItem)
+        {
+            element = VisualTreeHelper.GetParent(element);
+        }
+
+        if (element is not System.Windows.Controls.ListViewItem lvItem ||
+            lvItem.Content is not ArchiveDisplayItem displayItem ||
+            _currentFolderPath == null)
+            return;
+
+        if (displayItem.Entry.IsDirectory)
+        {
+            if (_onFolderNavigate == null) return;
+            _folderHistory.Push(_currentFolderPath);
+            NavigateToFolder(displayItem.Entry.FullPath);
+        }
+        else
+        {
+            if (_onFilePreviewRequested == null) return;
+            _folderHistory.Push(_currentFolderPath);
+            _isPreviewingFileInFolder = true;
+
+            _onFilePreviewRequested(displayItem.Entry.FullPath, result =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    ShowFilePreviewFromFolder(result, displayItem.Entry.FullPath);
+                });
+            });
+        }
+    }
+
+    private void OnBackClick(object sender, RoutedEventArgs e)
+    {
+        if (_folderHistory.Count == 0)
+            return;
+
+        if (_isPreviewingFileInFolder)
+        {
+            _isPreviewingFileInFolder = false;
+            var parentFolder = _folderHistory.Pop();
+
+            HideNonFolderPanels();
+            StopVideoPlayback();
+
+            _currentListKind = PreviewKind.Folder;
+            ArchivePanel.Visibility = Visibility.Visible;
+
+            NavigateToFolder(parentFolder);
+            return;
+        }
+
+        if (_onFolderNavigate == null) return;
+        var previousPath = _folderHistory.Pop();
+        NavigateToFolder(previousPath);
+    }
+
+    private void ShowFilePreviewFromFolder(PreviewResult result, string filePath)
+    {
+        HideNonFolderPanels();
+        ArchivePanel.Visibility = Visibility.Collapsed;
+
+        switch (result.Kind)
+        {
+            case PreviewKind.Image:
+                ShowImagePreview(result);
+                break;
+            case PreviewKind.Video:
+                ShowVideoPreview(result);
+                break;
+            case PreviewKind.Text:
+                ShowTextPreview(result, filePath);
+                break;
+            case PreviewKind.Archive:
+                ShowArchivePreview(result, filePath);
+                break;
+            default:
+                ShowUnsupportedPreview();
+                break;
+        }
+
+        BackButton.Visibility = Visibility.Visible;
+    }
+
+    private void HideNonFolderPanels()
+    {
+        ImagePreview.Visibility = Visibility.Collapsed;
+        ImagePreview.Source = null;
+        WpfAnimatedGif.ImageBehavior.SetAnimatedSource(ImagePreview, null);
+
+        VideoPlayer.Visibility = Visibility.Collapsed;
+        TextPreviewScroll.Visibility = Visibility.Collapsed;
+        MarkdownWebView.Visibility = Visibility.Collapsed;
+        CodeEditorPanel.Visibility = Visibility.Collapsed;
+        UnsupportedText.Visibility = Visibility.Collapsed;
+
+        InnerImagePreview.Source = null;
+        WpfAnimatedGif.ImageBehavior.SetAnimatedSource(InnerImagePreview, null);
+        InnerImagePreview.Visibility = Visibility.Collapsed;
+
+        TextPreviewContent.Text = string.Empty;
+        TextPreviewHeader.Text = string.Empty;
+        CodeEditor.Text = string.Empty;
+        CodePreviewHeader.Text = string.Empty;
+    }
+
+    private void NavigateToFolder(string path)
+    {
+        _onFolderNavigate?.Invoke(path, result =>
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _currentFolderPath = path;
+                _currentArchivePath = path;
+                _currentEntries = result.Entries;
+
+                ArchiveTitle.Text = $"\U0001f4c1 {System.IO.Path.GetFileName(path)} ({Strings.Format("FolderItemCount", result.Entries?.Count ?? 0)})";
+
+                var displayItems = _currentEntries?
+                    .Select(entry => new ArchiveDisplayItem(entry))
+                    .ToList();
+                FileListView.ItemsSource = displayItems;
+
+                BackButton.Visibility = _folderHistory.Count > 0
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+                InnerImagePreview.Visibility = Visibility.Collapsed;
+            });
+        });
+    }
+
     private void OnFileListMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
         if (FileListView.ItemsSource == null) return;
@@ -338,7 +529,14 @@ public partial class PreviewWindow : Window
         {
             if (displayItem.Entry.IsImage && !string.IsNullOrEmpty(_currentArchivePath))
             {
-                _onImageInArchiveHover?.Invoke(_currentArchivePath, displayItem.Entry.FullPath);
+                if (_currentListKind == PreviewKind.Folder)
+                {
+                    _onImageInArchiveHover?.Invoke("__folder__", displayItem.Entry.FullPath);
+                }
+                else
+                {
+                    _onImageInArchiveHover?.Invoke(_currentArchivePath, displayItem.Entry.FullPath);
+                }
             }
         }
     }
@@ -413,6 +611,7 @@ public partial class PreviewWindow : Window
     private void OnMouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
         _isMouseInside = false;
+        PreviewMouseLeft?.Invoke();
     }
 
     private void EnsureLibVLCInitialized()

@@ -31,29 +31,32 @@ public sealed class SvgPreviewProvider : IPreviewProvider
         return SupportedExtensions.Contains(ext);
     }
 
-    public async Task<PreviewResult> GeneratePreviewAsync(
+    public Task<PreviewResult> GeneratePreviewAsync(
         string filePath, CancellationToken ct = default)
     {
-        try
+        return Task.Run(() =>
         {
-            if (!File.Exists(filePath))
+            try
             {
-                throw new FileNotFoundException(Strings.Format("FileNotFound", filePath));
+                if (!File.Exists(filePath))
+                {
+                    throw new FileNotFoundException(Strings.Format("FileNotFound", filePath));
+                }
+
+                var svgContent = File.ReadAllText(filePath);
+
+                if (string.IsNullOrWhiteSpace(svgContent))
+                {
+                    throw new InvalidOperationException(Strings.Format("SvgFileEmpty", filePath));
+                }
+
+                return GenerateFromSvgContent(svgContent);
             }
-
-            var svgContent = await File.ReadAllTextAsync(filePath, ct);
-
-            if (string.IsNullOrWhiteSpace(svgContent))
+            catch (Exception ex)
             {
-                throw new InvalidOperationException(Strings.Format("SvgFileEmpty", filePath));
+                throw new Exception(Strings.Format("GeneratePreviewFailed", filePath), ex);
             }
-
-            return GenerateFromSvgContent(svgContent);
-        }
-        catch (Exception ex)
-        {
-            throw new Exception(Strings.Format("GeneratePreviewFailed", filePath), ex);
-        }
+        }, ct);
     }
 
     private PreviewResult GenerateFromSvgContent(string svgContent)

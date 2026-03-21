@@ -22,6 +22,7 @@ public partial class App : System.Windows.Application
     private ArchivePreviewProvider? _archiveProvider;
     private VideoPreviewProvider? _videoProvider;
     private TextPreviewProvider? _textProvider;
+    private FolderPreviewProvider? _folderProvider;
     private SettingsService? _settingsService;
     private bool _previewLocked = false;
     private WinForms.NotifyIcon? _notifyIcon;
@@ -78,6 +79,7 @@ public partial class App : System.Windows.Application
         _svgProvider = new SvgPreviewProvider(settings.ImageMaxDimension);
         _archiveProvider = new ArchivePreviewProvider(_imageProvider);
         _videoProvider = new VideoPreviewProvider();
+        _folderProvider = new FolderPreviewProvider();
         _textProvider = new TextPreviewProvider(
             settings.TextMaxFileSizeMB * 1024 * 1024,
             settings.TextMaxLines);
@@ -91,12 +93,13 @@ public partial class App : System.Windows.Application
         _hoverDetector.HoverStarted += OnHoverStarted;
         _hoverDetector.HoverEnded += OnHoverEnded;
 
-        _previewWindow = new PreviewWindow(OnImageInArchiveHover);
+        _previewWindow = new PreviewWindow(OnImageInArchiveHover, OnFolderNavigateRequested, OnFilePreviewRequested);
         _previewWindow.UpdateSettings(
             settings.WindowWidth, settings.WindowHeight,
             settings.CenterWindow,
             settings.FadeInDurationMs, settings.FadeOutDurationMs);
 
+        _previewWindow.PreviewMouseLeft += OnPreviewMouseLeft;
         _previewWindow.Show();
         _previewWindow.Hide();
 
@@ -147,7 +150,10 @@ public partial class App : System.Windows.Application
 
             _previewWindow?.Hide();
 
-            var filePath = _fileResolver?.ResolveFileAtPoint(x, y);
+            var resolver = _fileResolver;
+            var filePath = resolver != null
+                ? await Task.Run(() => resolver.ResolveFileAtPoint(x, y))
+                : null;
             if (filePath == null)
             {
                 return;
@@ -163,7 +169,9 @@ public partial class App : System.Windows.Application
                             ? _videoProvider
                             : _textProvider?.CanHandle(filePath) == true
                                 ? _textProvider
-                                : null;
+                                : _folderProvider?.CanHandle(filePath) == true
+                                    ? _folderProvider
+                                    : null;
 
             if (provider == null)
             {
@@ -199,11 +207,21 @@ public partial class App : System.Windows.Application
 
     private void OnHoverEnded()
     {
+        TryDelayedClose();
+    }
+
+    private void OnPreviewMouseLeft()
+    {
+        TryDelayedClose();
+    }
+
+    private void TryDelayedClose()
+    {
         Dispatcher.InvokeAsync(async () =>
         {
             var delay = _settingsService?.Current.AutoCloseDelayMs ?? 600;
             await Task.Delay(delay);
-            if (_previewWindow != null && !_previewWindow.IsMouseInside)
+            if (_previewWindow != null && !_previewWindow.IsMouseInside && _previewLocked)
             {
                 _previewWindow.Hide();
                 _previewLocked = false;
@@ -211,14 +229,73 @@ public partial class App : System.Windows.Application
         });
     }
 
-    private void OnImageInArchiveHover(string archivePath, string entryPath)
+    private async void OnFilePreviewRequested(string filePath, Action<PreviewResult> callback)
     {
-        if (_archiveProvider == null || _previewWindow == null)
+        IPreviewProvider? provider = _archiveProvider?.CanHandle(filePath) == true
+            ? _archiveProvider
+            : _svgProvider?.CanHandle(filePath) == true
+                ? _svgProvider
+                : _imageProvider?.CanHandle(filePath) == true
+                    ? _imageProvider
+                    : _videoProvider?.CanHandle(filePath) == true
+                        ? _videoProvider
+                        : _textProvider?.CanHandle(filePath) == true
+                            ? _textProvider
+                            : null;
+
+        if (provider == null)
+        {
+            callback(new PreviewResult { Kind = PreviewKind.Unsupported });
+            return;
+        }
+
+        try
+        {
+            var result = await provider.GeneratePreviewAsync(filePath);
+            callback(result);
+        }
+        catch
+        {
+            callback(new PreviewResult { Kind = PreviewKind.Unsupported });
+        }
+    }
+
+    private async void OnFolderNavigateRequested(string path, Action<PreviewResult> callback)
+    {
+        if (_folderProvider == null) return;
+
+        try
+        {
+            var result = await _folderProvider.GeneratePreviewAsync(path);
+            callback(result);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Folder navigate failed: {ex.Message}");
+        }
+    }
+
+    private async void OnImageInArchiveHover(string archivePath, string entryPath)
+    {
+        if (_previewWindow == null)
             return;
 
         try
         {
-            var imagePreview = _archiveProvider.PreviewImageInArchive(archivePath, entryPath);
+            PreviewResult imagePreview;
+
+            if (archivePath == "__folder__")
+            {
+                if (_imageProvider == null) return;
+                imagePreview = await _imageProvider.GeneratePreviewAsync(entryPath);
+            }
+            else
+            {
+                if (_archiveProvider == null) return;
+                imagePreview = await Task.Run(
+                    () => _archiveProvider.PreviewImageInArchive(archivePath, entryPath));
+            }
+
             _previewWindow.ShowInnerImagePreview(imagePreview);
         }
         catch
@@ -245,6 +322,19 @@ public partial class App : System.Windows.Application
 
     private static Icon LoadAppIcon()
     {
+        // 優先從嵌入資源讀取，避免 ClickOnce 等發布方式下路徑對不上
+        try
+        {
+            var resourceUri = new Uri("pack://application:,,,/HoverPeek;component/HoverPeek.ico", UriKind.Absolute);
+            var streamInfo = System.Windows.Application.GetResourceStream(resourceUri);
+            if (streamInfo != null)
+                return new Icon(streamInfo.Stream);
+        }
+        catch
+        {
+            // fallback 到檔案路徑
+        }
+
         var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "HoverPeek.ico");
         if (System.IO.File.Exists(iconPath))
             return new Icon(iconPath);
@@ -256,6 +346,9 @@ public partial class App : System.Windows.Application
     {
         if (_settingsService != null)
             _settingsService.SettingsChanged -= OnSettingsChanged;
+
+        if (_previewWindow != null)
+            _previewWindow.PreviewMouseLeft -= OnPreviewMouseLeft;
 
         _notifyIcon?.Dispose();
         _hoverDetector?.Dispose();

@@ -17,10 +17,16 @@
   - Auto-scaling with aspect ratio preserved
   - High-quality rendering via SkiaSharp
 
+- **Folders** (New)
+  - Browse folder contents (name, size, modified date)
+  - Double-click files to preview directly
+  - Back navigation support
+
 - **Archives**
   - Formats: ZIP, RAR, 7Z, TAR, GZ, BZ2, XZ, LZMA
   - Browse file listings inside archives
-  - Hover over images within archives for instant preview (no extraction needed)
+  - Double-click files to preview directly (no extraction needed)
+  - Built-in image cache for faster re-browsing
 
 - **Videos**
   - Formats: MP4, AVI, MKV, MOV, WMV, and more
@@ -42,6 +48,7 @@
 - **Text** — max file size, max lines, font size/family, Markdown and syntax highlighting toggles
 - **Video** — auto-play, mute
 - **Archives** — auto-expand file list
+- **About** — version info, author, GitHub link
 - **Startup** — launch on Windows startup (via registry)
 
 ### 🎯 Highlights
@@ -113,6 +120,7 @@ HoverPeek/
 │   │   ├── Preview/            # Preview providers
 │   │   │   ├── ImagePreviewProvider.cs
 │   │   │   ├── ArchivePreviewProvider.cs
+│   │   │   ├── FolderPreviewProvider.cs # Folder preview
 │   │   │   ├── VideoPreviewProvider.cs
 │   │   │   └── TextPreviewProvider.cs
 │   │   └── Settings/           # Settings service

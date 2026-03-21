@@ -6,6 +6,7 @@ public enum PreviewKind
     Archive,
     Video,
     Text,
+    Folder,
     Unsupported
 }
 
@@ -27,6 +28,8 @@ public sealed record PreviewResult
     public string? FileExtension { get; init; }
     public bool IsMarkdown { get; init; }
     public string? MarkdownHtml { get; init; }
+
+    public string? SourcePath { get; init; }
 }
 
 public sealed record ArchiveEntry

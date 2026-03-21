@@ -130,6 +130,9 @@
   <data name="ArchiveItemCount" xml:space="preserve">
     <value>{0} items</value>
   </data>
+  <data name="FolderItemCount" xml:space="preserve">
+    <value>{0} items</value>
+  </data>
   <data name="UnsupportedFileType" xml:space="preserve">
     <value>This file type is not supported for preview</value>
   </data>
@@ -417,5 +420,30 @@ Stack trace:
     <value>Are you sure you want to reset to default values?
 
 This will clear all custom settings.</value>
+  </data>
+
+  <!-- Folder navigation -->
+  <data name="FolderBack" xml:space="preserve">
+    <value>⬅ Back</value>
+  </data>
+
+  <!-- About -->
+  <data name="TabAbout" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="AboutDescription" xml:space="preserve">
+    <value>A lightweight file hover preview tool supporting images, videos, text, archives, folders and more.</value>
+  </data>
+  <data name="AboutAuthorLabel" xml:space="preserve">
+    <value>Developer</value>
+  </data>
+  <data name="AboutGitHubLabel" xml:space="preserve">
+    <value>GitHub</value>
+  </data>
+  <data name="AboutLicenseLabel" xml:space="preserve">
+    <value>License</value>
+  </data>
+  <data name="AboutFrameworkLabel" xml:space="preserve">
+    <value>Runtime</value>
   </data>
 </root>

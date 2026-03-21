@@ -149,6 +149,72 @@
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
+            <!-- 關於 -->
+            <TabItem Header="{x:Static loc:Strings.TabAbout}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16" MaxWidth="500" HorizontalAlignment="Left">
+                        <!-- App 名稱 + 版本 -->
+                        <TextBlock x:Name="AboutAppName"
+                                   FontSize="22"
+                                   FontWeight="Bold"
+                                   Margin="0,0,0,4"/>
+                        <TextBlock x:Name="AboutVersion"
+                                   FontSize="13"
+                                   Foreground="#666"
+                                   Margin="0,0,0,16"/>
+
+                        <!-- 描述 -->
+                        <TextBlock Text="{x:Static loc:Strings.AboutDescription}"
+                                   FontSize="13"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,24"/>
+
+                        <!-- 資訊列表 -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                       Text="{x:Static loc:Strings.AboutAuthorLabel}"
+                                       FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1"
+                                       Text="kyosora" Margin="0,0,0,8"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0"
+                                       Text="{x:Static loc:Strings.AboutGitHubLabel}"
+                                       FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,0,0,8">
+                                <Hyperlink x:Name="GitHubLink"
+                                           NavigateUri="https://github.com/kyosora/HoverPeek"
+                                           RequestNavigate="OnHyperlinkNavigate">
+                                    github.com/kyosora/HoverPeek
+                                </Hyperlink>
+                            </TextBlock>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0"
+                                       Text="{x:Static loc:Strings.AboutLicenseLabel}"
+                                       FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1"
+                                       Text="MIT License" Margin="0,0,0,8"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0"
+                                       Text="{x:Static loc:Strings.AboutFrameworkLabel}"
+                                       FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock x:Name="AboutFramework"
+                                       Grid.Row="3" Grid.Column="1"
+                                       Margin="0,0,0,8"/>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
         </TabControl>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">

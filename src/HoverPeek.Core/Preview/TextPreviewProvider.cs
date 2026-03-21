@@ -53,103 +53,103 @@ public sealed class TextPreviewProvider : IPreviewProvider
         return SupportedExtensions.Contains(ext);
     }
 
-    public async Task<PreviewResult> GeneratePreviewAsync(
+    public Task<PreviewResult> GeneratePreviewAsync(
         string filePath, CancellationToken ct = default)
     {
-        try
+        return Task.Run(() =>
         {
-            if (!File.Exists(filePath))
+            try
             {
-                throw new FileNotFoundException(Strings.Format("FileNotFound", filePath));
-            }
+                if (!File.Exists(filePath))
+                {
+                    throw new FileNotFoundException(Strings.Format("FileNotFound", filePath));
+                }
 
-            var fileInfo = new FileInfo(filePath);
+                var fileInfo = new FileInfo(filePath);
 
-            // 檢查檔案大小
-            if (fileInfo.Length > _maxFileSizeBytes)
-            {
+                // 檢查檔案大小
+                if (fileInfo.Length > _maxFileSizeBytes)
+                {
+                    return new PreviewResult
+                    {
+                        Kind = PreviewKind.Text,
+                        TextContent = $"{Strings.FileTooLargeTitle}\n\n{Strings.Format("FileSizeLabel", FormatFileSize(fileInfo.Length))}\n{Strings.Format("MaxSizeLabel", FormatFileSize(_maxFileSizeBytes))}",
+                        TextEncoding = "N/A",
+                        FileExtension = Path.GetExtension(filePath)
+                    };
+                }
+
+                // 嘗試讀取文字內容
+                string content;
+                string encodingName;
+
+                try
+                {
+                    content = File.ReadAllText(filePath, Encoding.UTF8);
+                    encodingName = "UTF-8";
+                }
+                catch
+                {
+                    try
+                    {
+                        content = File.ReadAllText(filePath, Encoding.Default);
+                        encodingName = Encoding.Default.EncodingName;
+                    }
+                    catch
+                    {
+                        var big5 = Encoding.GetEncoding("big5");
+                        content = File.ReadAllText(filePath, big5);
+                        encodingName = "Big5";
+                    }
+                }
+
+                ct.ThrowIfCancellationRequested();
+
+                // 限制行數
+                var lines = content.Split('\n');
+                if (lines.Length > _maxPreviewLines)
+                {
+                    var truncatedLines = lines.Take(_maxPreviewLines).ToArray();
+                    content = string.Join('\n', truncatedLines);
+                    content += $"\n\n{Strings.Format("TruncatedMessage", _maxPreviewLines, lines.Length)}";
+                }
+
+                // 檢查是否為 Markdown 檔案
+                var extension = Path.GetExtension(filePath);
+                var isMarkdown = extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
+                                 extension.Equals(".markdown", StringComparison.OrdinalIgnoreCase);
+
+                string? markdownHtml = null;
+                if (isMarkdown)
+                {
+                    try
+                    {
+                        var pipeline = new MarkdownPipelineBuilder()
+                            .UseAdvancedExtensions()
+                            .Build();
+                        markdownHtml = Markdown.ToHtml(content, pipeline);
+                    }
+                    catch
+                    {
+                        isMarkdown = false;
+                    }
+                }
+
                 return new PreviewResult
                 {
                     Kind = PreviewKind.Text,
-                    TextContent = $"{Strings.FileTooLargeTitle}\n\n{Strings.Format("FileSizeLabel", FormatFileSize(fileInfo.Length))}\n{Strings.Format("MaxSizeLabel", FormatFileSize(_maxFileSizeBytes))}",
-                    TextEncoding = "N/A",
-                    FileExtension = Path.GetExtension(filePath)
+                    TextContent = content,
+                    TextEncoding = encodingName,
+                    FileExtension = extension,
+                    IsMarkdown = isMarkdown,
+                    MarkdownHtml = markdownHtml
                 };
             }
-
-            // 嘗試讀取文字內容
-            string content;
-            string encodingName;
-
-            try
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // 先嘗試 UTF-8
-                content = await File.ReadAllTextAsync(filePath, Encoding.UTF8, ct);
-                encodingName = "UTF-8";
+                throw new Exception(Strings.Format("ReadTextFailed", filePath), ex);
             }
-            catch
-            {
-                try
-                {
-                    // UTF-8 失敗，嘗試系統預設編碼
-                    content = await File.ReadAllTextAsync(filePath, Encoding.Default, ct);
-                    encodingName = Encoding.Default.EncodingName;
-                }
-                catch
-                {
-                    // 嘗試 Big5（繁體中文常用）
-                    var big5 = Encoding.GetEncoding("big5");
-                    content = await File.ReadAllTextAsync(filePath, big5, ct);
-                    encodingName = "Big5";
-                }
-            }
-
-            // 限制行數（避免顯示超長內容）
-            var lines = content.Split('\n');
-            if (lines.Length > _maxPreviewLines)
-            {
-                var truncatedLines = lines.Take(_maxPreviewLines).ToArray();
-                content = string.Join('\n', truncatedLines);
-                content += $"\n\n{Strings.Format("TruncatedMessage", _maxPreviewLines, lines.Length)}";
-            }
-
-            // 檢查是否為 Markdown 檔案
-            var extension = Path.GetExtension(filePath);
-            var isMarkdown = extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
-                             extension.Equals(".markdown", StringComparison.OrdinalIgnoreCase);
-
-            string? markdownHtml = null;
-            if (isMarkdown)
-            {
-                try
-                {
-                    // 使用 Markdig 轉換 Markdown 為 HTML
-                    var pipeline = new MarkdownPipelineBuilder()
-                        .UseAdvancedExtensions()  // GitHub Flavored Markdown 擴展
-                        .Build();
-                    markdownHtml = Markdown.ToHtml(content, pipeline);
-                }
-                catch
-                {
-                    // Markdown 轉換失敗，fallback 到純文字顯示
-                    isMarkdown = false;
-                }
-            }
-
-            return new PreviewResult
-            {
-                Kind = PreviewKind.Text,
-                TextContent = content,
-                TextEncoding = encodingName,
-                FileExtension = extension,
-                IsMarkdown = isMarkdown,
-                MarkdownHtml = markdownHtml
-            };
-        }
-        catch (Exception ex)
-        {
-            throw new Exception(Strings.Format("ReadTextFailed", filePath), ex);
-        }
+        }, ct);
     }
 
     private static string FormatFileSize(long bytes)

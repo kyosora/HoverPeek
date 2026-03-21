@@ -17,10 +17,16 @@
   - 自動縮放，保持圖片比例
   - 高品質渲染（SkiaSharp）
 
+- **資料夾預覽**（🆕 新功能）
+  - 瀏覽資料夾內的檔案列表（檔名、大小、修改日期）
+  - 雙擊檔案可直接預覽內容
+  - 支援返回上層導覽
+
 - **壓縮檔預覽**
   - 支援格式：ZIP、RAR、7Z、TAR、GZ、BZ2、XZ、LZMA
   - 瀏覽壓縮檔內的檔案列表
-  - 懸停圖片可即時預覽（無需解壓）
+  - 雙擊檔案可直接預覽內容（無需解壓）
+  - 內建圖片快取，提升重複瀏覽效能
 
 - **影片預覽**
   - 支援格式：MP4、AVI、MKV、MOV、WMV 等
@@ -64,6 +70,9 @@
 
 - **壓縮檔設定**
   - 自動展開檔案列表
+
+- **關於**（🆕 新功能）
+  - 版本資訊、作者、GitHub 連結
 
 - **啟動設定**
   - 開機自動啟動（寫入 Windows 註冊表）
@@ -134,8 +143,11 @@ dotnet build src/HoverPeek.App/HoverPeek.App.csproj -c Release
 ### 語法高亮
 程式碼檔案（.py、.js、.cs 等）自動套用語法顏色，並顯示行號
 
+### 資料夾瀏覽
+懸停資料夾即可瀏覽內容，雙擊檔案直接預覽
+
 ### 壓縮檔瀏覽
-展開壓縮檔內容清單，懸停圖片可直接預覽（無需解壓）
+展開壓縮檔內容清單，雙擊檔案可直接預覽（無需解壓）
 
 ### 影片播放
 自動播放影片，支援硬體加速解碼
@@ -168,8 +180,9 @@ HoverPeek/
 │   │   ├── Preview/            # 預覽提供者
 │   │   │   ├── ImagePreviewProvider.cs
 │   │   │   ├── ArchivePreviewProvider.cs
+│   │   │   ├── FolderPreviewProvider.cs # 🆕 資料夾預覽
 │   │   │   ├── VideoPreviewProvider.cs
-│   │   │   └── TextPreviewProvider.cs  # 🆕 文字預覽
+│   │   │   └── TextPreviewProvider.cs
 │   │   └── Settings/           # 🆕 設定服務
 │   │       ├── AppSettings.cs
 │   │       └── SettingsService.cs

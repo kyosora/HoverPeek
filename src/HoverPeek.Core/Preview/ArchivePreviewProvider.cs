@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using SharpCompress.Archives;
 
 namespace HoverPeek.Core.Preview;
@@ -18,7 +19,14 @@ public sealed class ArchivePreviewProvider : IPreviewProvider
         ".ico", ".tiff", ".tif", ".svg", ".avif"
     };
 
+    private const int MaxEntries = 2000;
+
     private readonly ImagePreviewProvider _imageProvider;
+
+    // 輕量快取：只保留最後一個壓縮包的圖片解壓結果，避免 mouse move 時重複開檔
+    private string? _cachedArchivePath;
+    private readonly ConcurrentDictionary<string, PreviewResult> _imageCache = new();
+    private const int MaxCachedImages = 8;
 
     public ArchivePreviewProvider(ImagePreviewProvider imageProvider)
     {
@@ -34,46 +42,95 @@ public sealed class ArchivePreviewProvider : IPreviewProvider
     public Task<PreviewResult> GeneratePreviewAsync(
         string filePath, CancellationToken ct = default)
     {
-        try
+        return Task.Run(() =>
         {
-            using var archive = ArchiveFactory.Open(filePath);
-
-            var entries = archive.Entries
-                .Where(e => !e.IsDirectory || HasChildren(e, archive))
-                .Select(e => new ArchiveEntry
-                {
-                    FullPath = e.Key ?? "",
-                    Name = Path.GetFileName(e.Key ?? ""),
-                    Size = e.Size,
-                    IsDirectory = e.IsDirectory,
-                    IsImage = ImageExtensions.Contains(
-                        Path.GetExtension(e.Key ?? "")),
-                    LastModified = e.LastModifiedTime
-                })
-                .OrderBy(e => e.FullPath)
-                .ToList();
-
-            var result = new PreviewResult
+            try
             {
-                Kind = PreviewKind.Archive,
-                Entries = entries
-            };
+                using var archive = ArchiveFactory.Open(filePath);
 
-            return Task.FromResult(result);
-        }
-        catch
-        {
-            return Task.FromResult(new PreviewResult { Kind = PreviewKind.Unsupported });
-        }
+                // 先收集所有非目錄 entry 的路徑前綴，用來快速判斷目錄是否有子項
+                var filePrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var e in archive.Entries)
+                {
+                    if (!e.IsDirectory && e.Key != null)
+                    {
+                        // 把每一層父路徑都加進去
+                        var parent = Path.GetDirectoryName(e.Key)?.Replace('\\', '/');
+                        while (!string.IsNullOrEmpty(parent))
+                        {
+                            if (!filePrefixes.Add(parent + "/"))
+                                break; // 已存在，更上層也已經加過了
+                            parent = Path.GetDirectoryName(parent)?.Replace('\\', '/');
+                        }
+                    }
+                }
+
+                var count = 0;
+                var entries = new List<ArchiveEntry>();
+
+                foreach (var e in archive.Entries.OrderBy(e => e.Key))
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    if (count >= MaxEntries)
+                        break;
+
+                    // 跳過沒有子項的空目錄
+                    if (e.IsDirectory)
+                    {
+                        var dirKey = (e.Key ?? "").Replace('\\', '/');
+                        if (!dirKey.EndsWith("/"))
+                            dirKey += "/";
+                        if (!filePrefixes.Contains(dirKey))
+                            continue;
+                    }
+
+                    entries.Add(new ArchiveEntry
+                    {
+                        FullPath = e.Key ?? "",
+                        Name = Path.GetFileName(e.Key ?? ""),
+                        Size = e.Size,
+                        IsDirectory = e.IsDirectory,
+                        IsImage = ImageExtensions.Contains(
+                            Path.GetExtension(e.Key ?? "")),
+                        LastModified = e.LastModifiedTime
+                    });
+
+                    count++;
+                }
+
+                // 切換壓縮包時清掉圖片快取
+                InvalidateCacheIfNeeded(filePath);
+
+                return new PreviewResult
+                {
+                    Kind = PreviewKind.Archive,
+                    Entries = entries
+                };
+            }
+            catch (OperationCanceledException)
+            {
+                return new PreviewResult { Kind = PreviewKind.Unsupported };
+            }
+            catch
+            {
+                return new PreviewResult { Kind = PreviewKind.Unsupported };
+            }
+        }, ct);
     }
 
     /// <summary>
     /// 從壓縮包中提取特定圖片並產生預覽。
-    /// 不解壓整個檔案，只讀取目標 entry 的串流。
+    /// 帶有輕量快取，避免滑鼠移動時重複解壓。
     /// </summary>
     public PreviewResult PreviewImageInArchive(
         string archivePath, string entryPath)
     {
+        InvalidateCacheIfNeeded(archivePath);
+
+        if (_imageCache.TryGetValue(entryPath, out var cached))
+            return cached;
+
         try
         {
             using var archive = ArchiveFactory.Open(archivePath);
@@ -89,7 +146,14 @@ public sealed class ArchivePreviewProvider : IPreviewProvider
             using var ms = new MemoryStream();
             stream.CopyTo(ms);
 
-            return _imageProvider.GenerateFromBytes(ms.ToArray());
+            var result = _imageProvider.GenerateFromBytes(ms.ToArray());
+
+            // 快取滿了就全清，保持記憶體用量小
+            if (_imageCache.Count >= MaxCachedImages)
+                _imageCache.Clear();
+
+            _imageCache.TryAdd(entryPath, result);
+            return result;
         }
         catch
         {
@@ -97,15 +161,12 @@ public sealed class ArchivePreviewProvider : IPreviewProvider
         }
     }
 
-    private static bool HasChildren(IArchiveEntry dir, IArchive archive)
+    private void InvalidateCacheIfNeeded(string archivePath)
     {
-        if (!dir.IsDirectory)
-            return false;
-
-        var prefix = dir.Key ?? "";
-        return archive.Entries.Any(e =>
-            !e.IsDirectory &&
-            (e.Key ?? "").StartsWith(prefix,
-                StringComparison.OrdinalIgnoreCase));
+        if (!string.Equals(_cachedArchivePath, archivePath, StringComparison.OrdinalIgnoreCase))
+        {
+            _cachedArchivePath = archivePath;
+            _imageCache.Clear();
+        }
     }
 }

@@ -130,6 +130,9 @@
   <data name="ArchiveItemCount" xml:space="preserve">
     <value>{0} 個項目</value>
   </data>
+  <data name="FolderItemCount" xml:space="preserve">
+    <value>{0} 個項目</value>
+  </data>
   <data name="UnsupportedFileType" xml:space="preserve">
     <value>不支援預覽此檔案類型</value>
   </data>
@@ -417,5 +420,30 @@
     <value>確定要重設為預設值嗎？
 
 這將會清除所有自訂設定。</value>
+  </data>
+
+  <!-- Folder navigation -->
+  <data name="FolderBack" xml:space="preserve">
+    <value>⬅ 返回上一層</value>
+  </data>
+
+  <!-- About -->
+  <data name="TabAbout" xml:space="preserve">
+    <value>關於</value>
+  </data>
+  <data name="AboutDescription" xml:space="preserve">
+    <value>輕量級的檔案懸停預覽工具，支援圖片、影片、文字、壓縮檔、資料夾等多種格式。</value>
+  </data>
+  <data name="AboutAuthorLabel" xml:space="preserve">
+    <value>開發者</value>
+  </data>
+  <data name="AboutGitHubLabel" xml:space="preserve">
+    <value>GitHub</value>
+  </data>
+  <data name="AboutLicenseLabel" xml:space="preserve">
+    <value>授權條款</value>
+  </data>
+  <data name="AboutFrameworkLabel" xml:space="preserve">
+    <value>運行環境</value>
   </data>
 </root>

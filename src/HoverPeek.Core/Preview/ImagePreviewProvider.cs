@@ -30,36 +30,39 @@ public sealed class ImagePreviewProvider : IPreviewProvider
         return SupportedExtensions.Contains(ext);
     }
 
-    public async Task<PreviewResult> GeneratePreviewAsync(
+    public Task<PreviewResult> GeneratePreviewAsync(
         string filePath, CancellationToken ct = default)
     {
-        try
+        return Task.Run(() =>
         {
-            if (!File.Exists(filePath))
+            try
             {
-                throw new FileNotFoundException(Strings.Format("FileNotFound", filePath));
+                if (!File.Exists(filePath))
+                {
+                    throw new FileNotFoundException(Strings.Format("FileNotFound", filePath));
+                }
+
+                var bytes = File.ReadAllBytes(filePath);
+
+                if (bytes == null || bytes.Length == 0)
+                {
+                    throw new InvalidOperationException(Strings.Format("FileEmpty", filePath));
+                }
+
+                var result = GenerateFromBytes(bytes);
+
+                if (result.Kind == PreviewKind.Unsupported)
+                {
+                    throw new NotSupportedException(Strings.Format("CannotDecodeImage", filePath, bytes.Length));
+                }
+
+                return result;
             }
-
-            var bytes = await File.ReadAllBytesAsync(filePath, ct);
-
-            if (bytes == null || bytes.Length == 0)
+            catch (Exception ex)
             {
-                throw new InvalidOperationException(Strings.Format("FileEmpty", filePath));
+                throw new Exception(Strings.Format("GeneratePreviewFailed", filePath), ex);
             }
-
-            var result = GenerateFromBytes(bytes);
-
-            if (result.Kind == PreviewKind.Unsupported)
-            {
-                throw new NotSupportedException(Strings.Format("CannotDecodeImage", filePath, bytes.Length));
-            }
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw new Exception(Strings.Format("GeneratePreviewFailed", filePath), ex);
-        }
+        }, ct);
     }
 
     /// <summary>
