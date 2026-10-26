@@ -6,7 +6,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 ![.NET](https://img.shields.io/badge/.NET-8.0-purple.svg)
 
-**[繁體中文](README.md)** | **English(README.en.md)** | **Русский**
+**[繁體中文](README.md)** | **[English](README.en.md)** | **Русский**
 
 ## ✨ Возможности
 
