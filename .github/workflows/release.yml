@@ -1,0 +1,58 @@
+name: Release
+
+# 發新版：
+#   1. 改 src/HoverPeek.App/HoverPeek.App.csproj 的 <Version>
+#   2. 寫 .github/release-notes/v<版本>.md
+#   3. git tag v<版本> && git push origin v<版本>
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write   # 建立 GitHub Release 需要
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Check tag matches project version and release notes exist
+        shell: pwsh
+        run: |
+          [xml]$proj = Get-Content src/HoverPeek.App/HoverPeek.App.csproj
+          $version = ($proj.Project.PropertyGroup | Where-Object { $_.Version } | Select-Object -First 1).Version
+          if ("v$version" -ne $env:TAG) {
+            throw "標籤 $env:TAG 和 HoverPeek.App.csproj 的 <Version>$version</Version> 不一致，先改版本號再打標籤"
+          }
+          $notes = ".github/release-notes/$env:TAG.md"
+          if (-not (Test-Path $notes)) { throw "找不到 release notes：$notes" }
+
+      - name: Test
+        run: dotnet test HoverPeek.slnx -c Release
+
+      - name: Publish (win-x64, framework-dependent)
+        shell: pwsh
+        run: |
+          $out = "artifacts/HoverPeek-$env:TAG-win-x64"
+          dotnet publish src/HoverPeek.App/HoverPeek.App.csproj -c Release -r win-x64 --self-contained false `
+            -p:DebugType=none -p:GenerateDocumentationFile=false -o $out
+          if (-not (Test-Path "$out/HoverPeek.exe")) { throw "publish 輸出裡沒有 HoverPeek.exe" }
+          Compress-Archive -Path "$out/*" -DestinationPath "artifacts/HoverPeek-$env:TAG-win-x64.zip"
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:TAG "artifacts/HoverPeek-$env:TAG-win-x64.zip" `
+            --title "HoverPeek $env:TAG" `
+            --notes-file ".github/release-notes/$env:TAG.md"

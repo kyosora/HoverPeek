@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+    tags-ignore: ["v*"]   # 版本標籤由 release.yml 處理（它也會跑測試）
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # .slnx 需要 SDK 9.0.200 以上；專案目標是 net8.0-windows，測試要 .NET 8 runtime
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore HoverPeek.slnx
+
+      - name: Build
+        run: dotnet build HoverPeek.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test HoverPeek.slnx -c Release --no-build --logger "trx;LogFileName=results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/TestResults/*.trx"
