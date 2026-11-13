@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Resources;
 
 namespace HoverPeek.Core.Localization;
@@ -148,4 +148,50 @@ public static class Strings
     public static string SaveErrorMessage => Get(nameof(SaveErrorMessage));
     public static string SaveErrorTitle => Get(nameof(SaveErrorTitle));
     public static string ResetConfirmMessage => Get(nameof(ResetConfirmMessage));
+
+    // Added by tools/add_strings.py
+    public static string PreviewLoading => Get(nameof(PreviewLoading));
+    public static string PreviewFailedTitle => Get(nameof(PreviewFailedTitle));
+    public static string PreviewShowDetails => Get(nameof(PreviewShowDetails));
+    public static string PreviewCopyPath => Get(nameof(PreviewCopyPath));
+    public static string BadgeTruncated => Get(nameof(BadgeTruncated));
+    public static string BadgeLowRes => Get(nameof(BadgeLowRes));
+    public static string MetaItems => Get(nameof(MetaItems));
+    public static string HeaderModified => Get(nameof(HeaderModified));
+    public static string ArchiveEncryptedOrBroken => Get(nameof(ArchiveEncryptedOrBroken));
+    public static string TrayPause => Get(nameof(TrayPause));
+    public static string TrayResume => Get(nameof(TrayResume));
+    public static string TrayOpenLog => Get(nameof(TrayOpenLog));
+    public static string TrayPausedTooltip => Get(nameof(TrayPausedTooltip));
+    public static string UnexpectedErrorLogged => Get(nameof(UnexpectedErrorLogged));
+
+    // Added by tools/add_strings.py
+    public static string SectionImage => Get(nameof(SectionImage));
+    public static string SectionText => Get(nameof(SectionText));
+    public static string SectionVideo => Get(nameof(SectionVideo));
+    public static string SectionArchive => Get(nameof(SectionArchive));
+    public static string SectionGeneral => Get(nameof(SectionGeneral));
+    public static string DescWindowWidth => Get(nameof(DescWindowWidth));
+    public static string DescWindowHeight => Get(nameof(DescWindowHeight));
+    public static string DescCenterWindow => Get(nameof(DescCenterWindow));
+    public static string DescFadeInDuration => Get(nameof(DescFadeInDuration));
+    public static string LabelShowQuickThumbnail => Get(nameof(LabelShowQuickThumbnail));
+    public static string DescShowQuickThumbnail => Get(nameof(DescShowQuickThumbnail));
+    public static string DescTextMaxFileSize => Get(nameof(DescTextMaxFileSize));
+    public static string DescTextMaxLines => Get(nameof(DescTextMaxLines));
+    public static string DescTextFontSize => Get(nameof(DescTextFontSize));
+    public static string DescTextFontFamily => Get(nameof(DescTextFontFamily));
+    public static string DescLanguage => Get(nameof(DescLanguage));
+    public static string UnitMilliseconds => Get(nameof(UnitMilliseconds));
+    public static string UnitPixels => Get(nameof(UnitPixels));
+    public static string UnitMegabytes => Get(nameof(UnitMegabytes));
+    public static string UnitLines => Get(nameof(UnitLines));
+    public static string UnitPoints => Get(nameof(UnitPoints));
+    public static string IntegerRangeValidation => Get(nameof(IntegerRangeValidation));
+    public static string ButtonOpenSettingsFolder => Get(nameof(ButtonOpenSettingsFolder));
+    public static string ButtonOpenLogFolder => Get(nameof(ButtonOpenLogFolder));
+    public static string AboutAppName => Get(nameof(AboutAppName));
+    public static string AboutAuthorValue => Get(nameof(AboutAuthorValue));
+    public static string AboutGitHubValue => Get(nameof(AboutGitHubValue));
+    public static string AboutLicenseValue => Get(nameof(AboutLicenseValue));
 }

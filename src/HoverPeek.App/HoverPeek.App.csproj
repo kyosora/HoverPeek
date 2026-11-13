@@ -8,9 +8,14 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>HoverPeek.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- WFAC010 建議改用 ApplicationHighDpiMode，但那只影響 WinForms；WPF 的 DPI 感知度只認 manifest，所以保留 manifest -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+    <!-- 只發布 x64：x86 版 libvlc 有 96MB，64 位元程式用不到 -->
+    <VlcWindowsX86Enabled>false</VlcWindowsX86Enabled>
     <AssemblyName>HoverPeek</AssemblyName>
     <Product>HoverPeek</Product>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

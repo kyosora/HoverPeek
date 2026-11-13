@@ -16,18 +16,19 @@ public sealed class VideoPreviewProvider : IPreviewProvider
         return SupportedExtensions.Contains(ext);
     }
 
-    public Task<PreviewResult> GeneratePreviewAsync(
-        string filePath, CancellationToken ct = default)
+    public Task<PreviewResult> GeneratePreviewAsync(PreviewRequest request, CancellationToken ct = default)
     {
-        if (!File.Exists(filePath))
-        {
-            throw new FileNotFoundException($"檔案不存在: {filePath}");
-        }
+        var filePath = request.Path;
+        var info = new FileInfo(filePath);
+        if (!info.Exists)
+            throw new FileNotFoundException(Localization.Strings.Format("FileNotFound", filePath), filePath);
 
         var result = new PreviewResult
         {
             Kind = PreviewKind.Video,
-            VideoFilePath = filePath
+            VideoFilePath = filePath,
+            SourcePath = filePath,
+            FileSize = info.Length,
         };
 
         return Task.FromResult(result);

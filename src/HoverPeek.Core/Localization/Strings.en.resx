@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -265,39 +265,39 @@ Stack trace:
 
   <!-- Settings - Hover behavior -->
   <data name="LabelHoverDelay" xml:space="preserve">
-    <value>Hover Delay (ms)</value>
+    <value>Hover delay</value>
   </data>
   <data name="LabelJitterTolerance" xml:space="preserve">
-    <value>Jitter Tolerance (px)</value>
+    <value>Jitter tolerance</value>
   </data>
   <data name="LabelAutoCloseDelay" xml:space="preserve">
-    <value>Auto Close Delay (ms)</value>
+    <value>Auto-close delay</value>
   </data>
   <data name="DescriptionLabel" xml:space="preserve">
     <value>Notes:</value>
   </data>
   <data name="DescHoverDelay" xml:space="preserve">
-    <value>&#x2022; Hover delay: how long the mouse must stay before showing preview</value>
+    <value>How long the pointer must rest on a file before the preview appears</value>
   </data>
   <data name="DescJitterTolerance" xml:space="preserve">
-    <value>&#x2022; Jitter tolerance: slight mouse movement won't reset the timer</value>
+    <value>Small movements within this distance don't restart the timer</value>
   </data>
   <data name="DescAutoCloseDelay" xml:space="preserve">
-    <value>&#x2022; Auto close delay: how long after leaving a file before closing preview</value>
+    <value>How long after leaving a file the preview closes; it stays open while the pointer is inside it</value>
   </data>
 
   <!-- Settings - Preview window -->
   <data name="LabelWindowWidth" xml:space="preserve">
-    <value>Window Width (px)</value>
+    <value>Maximum width</value>
   </data>
   <data name="LabelWindowHeight" xml:space="preserve">
-    <value>Window Height (px)</value>
+    <value>Maximum height</value>
   </data>
   <data name="LabelCenterWindow" xml:space="preserve">
-    <value>Center on screen (otherwise follow mouse)</value>
+    <value>Center on screen</value>
   </data>
   <data name="LabelFadeInDuration" xml:space="preserve">
-    <value>Fade In Duration (ms)</value>
+    <value>Fade-in animation</value>
   </data>
   <data name="LabelFadeOutDuration" xml:space="preserve">
     <value>Fade Out Duration (ms)</value>
@@ -305,30 +305,30 @@ Stack trace:
 
   <!-- Settings - Image preview -->
   <data name="LabelImageMaxDimension" xml:space="preserve">
-    <value>Max Preview Size (px)</value>
+    <value>Maximum image size</value>
   </data>
   <data name="LabelEnableGifAnimation" xml:space="preserve">
     <value>Play GIF animations</value>
   </data>
   <data name="DescImageScale" xml:space="preserve">
-    <value>&#x2022; Large images are automatically scaled down to this size</value>
+    <value>The long side of large images is scaled to fit; high-DPI screens get matching pixels so previews stay sharp</value>
   </data>
   <data name="DescGifStatic" xml:space="preserve">
-    <value>&#x2022; Disable GIF animation to show the first frame only</value>
+    <value>When off, only the first frame is shown</value>
   </data>
 
   <!-- Settings - Text preview -->
   <data name="LabelTextMaxFileSize" xml:space="preserve">
-    <value>Max File Size (MB)</value>
+    <value>Maximum read size</value>
   </data>
   <data name="LabelTextMaxLines" xml:space="preserve">
-    <value>Max Display Lines</value>
+    <value>Maximum lines</value>
   </data>
   <data name="LabelTextFontSize" xml:space="preserve">
     <value>Font Size</value>
   </data>
   <data name="LabelTextFontFamily" xml:space="preserve">
-    <value>Font Family</value>
+    <value>Font</value>
   </data>
   <data name="LabelEnableMarkdownRendering" xml:space="preserve">
     <value>Enable Markdown rendering</value>
@@ -337,10 +337,10 @@ Stack trace:
     <value>Enable syntax highlighting</value>
   </data>
   <data name="DescMarkdownRendering" xml:space="preserve">
-    <value>&#x2022; Markdown rendering displays .md files as formatted web pages</value>
+    <value>Show .md files as formatted pages (scripts inside are never run)</value>
   </data>
   <data name="DescSyntaxHighlighting" xml:space="preserve">
-    <value>&#x2022; Syntax highlighting adds color to code files</value>
+    <value>Add syntax colors to code files</value>
   </data>
 
   <!-- Settings - Video preview -->
@@ -351,10 +351,10 @@ Stack trace:
     <value>Mute playback</value>
   </data>
   <data name="DescVideoThumbnail" xml:space="preserve">
-    <value>&#x2022; Disable auto-play to show video thumbnail</value>
+    <value>When off, the video thumbnail is shown and playback starts on click</value>
   </data>
   <data name="DescVideoMuted" xml:space="preserve">
-    <value>&#x2022; Recommended to keep muted to avoid disturbance</value>
+    <value>When off, audio is played</value>
   </data>
 
   <!-- Settings - Archive preview -->
@@ -362,7 +362,7 @@ Stack trace:
     <value>Auto-expand file list</value>
   </data>
   <data name="DescArchiveAutoExpand" xml:space="preserve">
-    <value>&#x2022; Auto-expand shows archive contents immediately on preview</value>
+    <value>List archive contents right away; when off, use the expand button</value>
   </data>
   <data name="DescArchiveManual" xml:space="preserve">
     <value>&#x2022; Uncheck to manually click the expand button</value>
@@ -373,7 +373,7 @@ Stack trace:
     <value>Start with Windows</value>
   </data>
   <data name="DescStartup" xml:space="preserve">
-    <value>&#x2022; HoverPeek will launch automatically when Windows starts</value>
+    <value>Run in the background when you sign in to Windows</value>
   </data>
   <data name="DescTrayMinimize" xml:space="preserve">
     <value>&#x2022; The app runs minimized in the system tray</value>
@@ -445,5 +445,132 @@ This will clear all custom settings.</value>
   </data>
   <data name="AboutFrameworkLabel" xml:space="preserve">
     <value>Runtime</value>
+  </data>
+  <data name="PreviewLoading" xml:space="preserve">
+    <value>Loading…</value>
+  </data>
+  <data name="PreviewFailedTitle" xml:space="preserve">
+    <value>Can't preview this file</value>
+  </data>
+  <data name="PreviewShowDetails" xml:space="preserve">
+    <value>Show details</value>
+  </data>
+  <data name="PreviewCopyPath" xml:space="preserve">
+    <value>Copy path</value>
+  </data>
+  <data name="BadgeTruncated" xml:space="preserve">
+    <value>Truncated</value>
+  </data>
+  <data name="BadgeLowRes" xml:space="preserve">
+    <value>Thumbnail</value>
+  </data>
+  <data name="MetaItems" xml:space="preserve">
+    <value>{0} items</value>
+  </data>
+  <data name="HeaderModified" xml:space="preserve">
+    <value>Modified</value>
+  </data>
+  <data name="ArchiveEncryptedOrBroken" xml:space="preserve">
+    <value>Archive can't be opened (it may be encrypted or damaged)</value>
+  </data>
+  <data name="TrayPause" xml:space="preserve">
+    <value>Pause previews</value>
+  </data>
+  <data name="TrayResume" xml:space="preserve">
+    <value>Resume previews</value>
+  </data>
+  <data name="TrayOpenLog" xml:space="preserve">
+    <value>Open log folder</value>
+  </data>
+  <data name="TrayPausedTooltip" xml:space="preserve">
+    <value>HoverPeek (paused)</value>
+  </data>
+  <data name="UnexpectedErrorLogged" xml:space="preserve">
+    <value>HoverPeek hit an unexpected error. Details were written to the log:
+{0}</value>
+  </data>
+  <data name="SectionImage" xml:space="preserve">
+    <value>Images</value>
+  </data>
+  <data name="SectionText" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="SectionVideo" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="SectionArchive" xml:space="preserve">
+    <value>Archives</value>
+  </data>
+  <data name="SectionGeneral" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="DescWindowWidth" xml:space="preserve">
+    <value>Image previews shrink to fit the picture and never exceed this width</value>
+  </data>
+  <data name="DescWindowHeight" xml:space="preserve">
+    <value>Image previews shrink to fit the picture and never exceed this height</value>
+  </data>
+  <data name="DescCenterWindow" xml:space="preserve">
+    <value>When off, previews appear beside the pointer, like QTTabBar</value>
+  </data>
+  <data name="DescFadeInDuration" xml:space="preserve">
+    <value>Fade-in time when a preview appears; 0 shows it instantly</value>
+  </data>
+  <data name="LabelShowQuickThumbnail" xml:space="preserve">
+    <value>Show quick thumbnail first</value>
+  </data>
+  <data name="DescShowQuickThumbnail" xml:space="preserve">
+    <value>Show the Windows thumbnail cache image first, then swap in the full-quality version</value>
+  </data>
+  <data name="DescTextMaxFileSize" xml:space="preserve">
+    <value>Larger files load only this much from the start and are marked as truncated</value>
+  </data>
+  <data name="DescTextMaxLines" xml:space="preserve">
+    <value>Lines beyond this are hidden and the preview is marked as truncated</value>
+  </data>
+  <data name="DescTextFontSize" xml:space="preserve">
+    <value>Font size used for text and code previews</value>
+  </data>
+  <data name="DescTextFontFamily" xml:space="preserve">
+    <value>Font used for text and code previews; you can enter any installed font</value>
+  </data>
+  <data name="DescLanguage" xml:space="preserve">
+    <value>Restart HoverPeek after changing the interface language</value>
+  </data>
+  <data name="UnitMilliseconds" xml:space="preserve">
+    <value>ms</value>
+  </data>
+  <data name="UnitPixels" xml:space="preserve">
+    <value>px</value>
+  </data>
+  <data name="UnitMegabytes" xml:space="preserve">
+    <value>MB</value>
+  </data>
+  <data name="UnitLines" xml:space="preserve">
+    <value>lines</value>
+  </data>
+  <data name="UnitPoints" xml:space="preserve">
+    <value>pt</value>
+  </data>
+  <data name="IntegerRangeValidation" xml:space="preserve">
+    <value>Enter a whole number from {0} to {1}</value>
+  </data>
+  <data name="ButtonOpenSettingsFolder" xml:space="preserve">
+    <value>Open settings folder</value>
+  </data>
+  <data name="ButtonOpenLogFolder" xml:space="preserve">
+    <value>Open log folder</value>
+  </data>
+  <data name="AboutAppName" xml:space="preserve">
+    <value>HoverPeek</value>
+  </data>
+  <data name="AboutAuthorValue" xml:space="preserve">
+    <value>kyosora</value>
+  </data>
+  <data name="AboutGitHubValue" xml:space="preserve">
+    <value>github.com/kyosora/HoverPeek</value>
+  </data>
+  <data name="AboutLicenseValue" xml:space="preserve">
+    <value>MIT License</value>
   </data>
 </root>

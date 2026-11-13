@@ -1,0 +1,540 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Core - Error messages -->
+    <data name="FileNotFound" xml:space="preserve">
+    <value>파일을 찾을 수 없습니다: {0}</value>
+  </data>
+  <data name="FileEmpty" xml:space="preserve">
+    <value>파일이 비어 있습니다: {0}</value>
+  </data>
+  <data name="CannotDecodeImage" xml:space="preserve">
+    <value>이미지를 디코딩할 수 없습니다. 파일: {0}, 크기: {1} bytes</value>
+  </data>
+  <data name="FileTooSmallHeader" xml:space="preserve">
+    <value>파일이 너무 작습니다</value>
+  </data>
+  <data name="SKCodecNull" xml:space="preserve">
+    <value>SKCodec.Create에서 null을 반환했습니다. 파일 크기: {0} bytes, 처음 16 bytes: {1}</value>
+  </data>
+  <data name="SKBitmapDecodeNull" xml:space="preserve">
+    <value>SKBitmap.Decode에서 null을 반환했습니다. 원본 크기: {0}x{1}</value>
+  </data>
+  <data name="ResizeNull" xml:space="preserve">
+    <value>Resize에서 null을 반환했습니다. 원본: {0}x{1}, 조정 후: {2}x{3}</value>
+  </data>
+  <data name="GeneratePreviewFailed" xml:space="preserve">
+    <value>GeneratePreviewAsync 실패: {0}</value>
+  </data>
+  <data name="GenerateFromBytesFailed" xml:space="preserve">
+    <value>GenerateFromBytes 실패. 바이트 수: {0}</value>
+  </data>
+  <data name="SvgFileEmpty" xml:space="preserve">
+    <value>SVG 파일이 비어 있습니다: {0}</value>
+  </data>
+  <data name="CannotLoadSvg" xml:space="preserve">
+    <value>SVG 콘텐츠를 불러올 수 없습니다</value>
+  </data>
+  <data name="SvgInvalidSize" xml:space="preserve">
+    <value>SVG 크기가 올바르지 않습니다: {0}x{1}</value>
+  </data>
+  <data name="GenerateSvgFailed" xml:space="preserve">
+    <value>GenerateFromSvgContent 실패</value>
+  </data>
+  <data name="ReadTextFailed" xml:space="preserve">
+    <value>텍스트 파일을 읽지 못했습니다: {0}</value>
+  </data>
+  <data name="SaveSettingsFailed" xml:space="preserve">
+    <value>설정을 저장하지 못했습니다: {0}</value>
+  </data>
+  <data name="FileTooLargeTitle" xml:space="preserve">
+    <value>파일이 너무 커서 미리 볼 수 없습니다</value>
+  </data>
+  <data name="FileSizeLabel" xml:space="preserve">
+    <value>파일 크기: {0}</value>
+  </data>
+  <data name="MaxSizeLabel" xml:space="preserve">
+    <value>최대 지원 크기: {0}</value>
+  </data>
+  <data name="TruncatedMessage" xml:space="preserve">
+    <value>... (잘림, 전체 {1}줄 중 처음 {0}줄만 표시)</value>
+  </data>
+  <data name="ExpandFileList" xml:space="preserve">
+    <value>파일 목록 펼치기</value>
+  </data>
+  <data name="CollapseFileList" xml:space="preserve">
+    <value>파일 목록 접기</value>
+  </data>
+  <data name="ArchiveItemCount" xml:space="preserve">
+    <value>항목 {0}개</value>
+  </data>
+  <data name="FolderItemCount" xml:space="preserve">
+    <value>항목 {0}개</value>
+  </data>
+  <data name="UnsupportedFileType" xml:space="preserve">
+    <value>이 파일 형식은 미리 보기를 지원하지 않습니다</value>
+  </data>
+  <data name="VideoCannotPlay" xml:space="preserve">
+    <value>동영상을 재생할 수 없습니다</value>
+  </data>
+  <data name="HeaderName" xml:space="preserve">
+    <value>이름</value>
+  </data>
+  <data name="HeaderSize" xml:space="preserve">
+    <value>크기</value>
+  </data>
+  <data name="HeaderType" xml:space="preserve">
+    <value>유형</value>
+  </data>
+  <data name="EncodingUnknown" xml:space="preserve">
+    <value>알 수 없음</value>
+  </data>
+  <data name="TrayTooltip" xml:space="preserve">
+    <value>HoverPeek - 파일 미리 보기 도구</value>
+  </data>
+  <data name="TraySettings" xml:space="preserve">
+    <value>설정</value>
+  </data>
+  <data name="TrayExitApp" xml:space="preserve">
+    <value>HoverPeek 종료</value>
+  </data>
+  <data name="TrayRunningTitle" xml:space="preserve">
+    <value>HoverPeek</value>
+  </data>
+  <data name="TrayRunningMessage" xml:space="preserve">
+    <value>HoverPeek가 백그라운드에서 실행 중입니다
+
+파일 탐색기에서 이미지, 압축 파일 또는 동영상 위에 마우스를 올리면 미리 볼 수 있습니다</value>
+  </data>
+  <data name="MouseHookFailed" xml:space="preserve">
+    <value>마우스 후크를 설치할 수 없습니다: {0}
+
+앱에 충분한 권한이 있는지 확인하세요.</value>
+  </data>
+  <data name="StartupFailedTitle" xml:space="preserve">
+    <value>HoverPeek 시작 실패</value>
+  </data>
+  <data name="PreviewErrorTitle" xml:space="preserve">
+    <value>HoverPeek 미리 보기 오류</value>
+  </data>
+  <data name="PreviewErrorMessage" xml:space="preserve">
+    <value>이미지를 미리 보는 중 오류가 발생했습니다:
+
+파일: {0}
+
+</value>
+  </data>
+  <data name="ErrorLabel" xml:space="preserve">
+    <value>[오류 {0}]</value>
+  </data>
+  <data name="FullStackTrace" xml:space="preserve">
+    <value>
+전체 스택 추적:
+{0}</value>
+  </data>
+  <data name="UnhandledExceptionMessage" xml:space="preserve">
+    <value>처리되지 않은 예외가 발생했습니다:
+
+{0}
+{1}
+
+스택 추적:
+{2}</value>
+  </data>
+  <data name="FatalErrorMessage" xml:space="preserve">
+    <value>치명적인 오류가 발생했습니다:
+
+{0}
+{1}
+
+스택 추적:
+{2}</value>
+  </data>
+  <data name="TaskExceptionMessage" xml:space="preserve">
+    <value>관찰되지 않은 Task 예외가 발생했습니다:
+
+{0}
+{1}
+
+스택 추적:
+{2}</value>
+  </data>
+  <data name="ErrorTitle" xml:space="preserve">
+    <value>HoverPeek 오류</value>
+  </data>
+  <data name="FatalErrorTitle" xml:space="preserve">
+    <value>HoverPeek 치명적 오류</value>
+  </data>
+  <data name="TaskErrorTitle" xml:space="preserve">
+    <value>HoverPeek Task 오류</value>
+  </data>
+  <data name="SettingsWindowTitle" xml:space="preserve">
+    <value>HoverPeek 설정</value>
+  </data>
+  <data name="TabHoverBehavior" xml:space="preserve">
+    <value>마우스 올리기 동작</value>
+  </data>
+  <data name="TabPreviewWindow" xml:space="preserve">
+    <value>미리 보기 창</value>
+  </data>
+  <data name="TabImagePreview" xml:space="preserve">
+    <value>이미지 미리 보기</value>
+  </data>
+  <data name="TabTextPreview" xml:space="preserve">
+    <value>텍스트 미리 보기</value>
+  </data>
+  <data name="TabVideoPreview" xml:space="preserve">
+    <value>동영상 미리 보기</value>
+  </data>
+  <data name="TabArchivePreview" xml:space="preserve">
+    <value>압축 파일 미리 보기</value>
+  </data>
+  <data name="TabStartup" xml:space="preserve">
+    <value>시작 설정</value>
+  </data>
+  <data name="LabelHoverDelay" xml:space="preserve">
+    <value>마우스 올리기 지연</value>
+  </data>
+  <data name="LabelJitterTolerance" xml:space="preserve">
+    <value>움직임 허용 범위</value>
+  </data>
+  <data name="LabelAutoCloseDelay" xml:space="preserve">
+    <value>자동 닫기 지연</value>
+  </data>
+  <data name="DescriptionLabel" xml:space="preserve">
+    <value>설명:</value>
+  </data>
+  <data name="DescHoverDelay" xml:space="preserve">
+    <value>파일 위에 마우스를 올린 후 미리 보기가 나타날 때까지의 시간</value>
+  </data>
+  <data name="DescJitterTolerance" xml:space="preserve">
+    <value>이 범위 안의 작은 움직임은 타이머를 다시 시작하지 않습니다</value>
+  </data>
+  <data name="DescAutoCloseDelay" xml:space="preserve">
+    <value>파일에서 마우스를 뗀 후 미리 보기가 닫힐 때까지의 시간입니다. 미리 보기 창 안에 포인터가 있으면 닫히지 않습니다</value>
+  </data>
+  <data name="LabelWindowWidth" xml:space="preserve">
+    <value>창 최대 너비</value>
+  </data>
+  <data name="LabelWindowHeight" xml:space="preserve">
+    <value>창 최대 높이</value>
+  </data>
+  <data name="LabelCenterWindow" xml:space="preserve">
+    <value>화면 가운데에 고정</value>
+  </data>
+  <data name="LabelFadeInDuration" xml:space="preserve">
+    <value>페이드 인 애니메이션</value>
+  </data>
+  <data name="LabelFadeOutDuration" xml:space="preserve">
+    <value>페이드 아웃 시간(밀리초)</value>
+  </data>
+  <data name="LabelImageMaxDimension" xml:space="preserve">
+    <value>이미지 최대 크기</value>
+  </data>
+  <data name="LabelEnableGifAnimation" xml:space="preserve">
+    <value>GIF 애니메이션 재생</value>
+  </data>
+  <data name="DescImageScale" xml:space="preserve">
+    <value>큰 이미지는 긴 변이 이 크기 안에 들어오도록 축소됩니다. 고 DPI 화면에서는 선명도를 유지하도록 알맞은 픽셀 수로 디코딩합니다</value>
+  </data>
+  <data name="DescGifStatic" xml:space="preserve">
+    <value>끄면 첫 프레임만 표시합니다</value>
+  </data>
+  <data name="LabelTextMaxFileSize" xml:space="preserve">
+    <value>최대 읽기 크기</value>
+  </data>
+  <data name="LabelTextMaxLines" xml:space="preserve">
+    <value>최대 표시 줄 수</value>
+  </data>
+  <data name="LabelTextFontSize" xml:space="preserve">
+    <value>글꼴 크기</value>
+  </data>
+  <data name="LabelTextFontFamily" xml:space="preserve">
+    <value>글꼴</value>
+  </data>
+  <data name="LabelEnableMarkdownRendering" xml:space="preserve">
+    <value>Markdown 렌더링 사용</value>
+  </data>
+  <data name="LabelEnableSyntaxHighlighting" xml:space="preserve">
+    <value>구문 강조 사용</value>
+  </data>
+  <data name="DescMarkdownRendering" xml:space="preserve">
+    <value>.md 파일을 서식이 적용된 페이지로 표시합니다(내부 스크립트는 실행하지 않음)</value>
+  </data>
+  <data name="DescSyntaxHighlighting" xml:space="preserve">
+    <value>코드 파일의 구문을 색으로 구분합니다</value>
+  </data>
+  <data name="LabelVideoAutoPlay" xml:space="preserve">
+    <value>동영상 자동 재생</value>
+  </data>
+  <data name="LabelVideoMuted" xml:space="preserve">
+    <value>음소거 재생</value>
+  </data>
+  <data name="DescVideoThumbnail" xml:space="preserve">
+    <value>끄면 동영상 미리 보기 이미지를 먼저 표시하고 클릭할 때 재생합니다</value>
+  </data>
+  <data name="DescVideoMuted" xml:space="preserve">
+    <value>끄면 소리가 재생됩니다</value>
+  </data>
+  <data name="LabelArchiveAutoExpand" xml:space="preserve">
+    <value>파일 목록 자동 펼치기</value>
+  </data>
+  <data name="DescArchiveAutoExpand" xml:space="preserve">
+    <value>압축 파일을 미리 볼 때 내용을 바로 나열합니다. 끄면 '파일 목록 펼치기'를 누르세요</value>
+  </data>
+  <data name="DescArchiveManual" xml:space="preserve">
+    <value>• 선택을 취소하면 '파일 목록 펼치기' 버튼을 직접 클릭할 수 있습니다</value>
+  </data>
+  <data name="LabelStartWithWindows" xml:space="preserve">
+    <value>Windows 시작 시 자동 실행</value>
+  </data>
+  <data name="DescStartup" xml:space="preserve">
+    <value>Windows에 로그인할 때 백그라운드에서 자동으로 실행합니다</value>
+  </data>
+  <data name="DescTrayMinimize" xml:space="preserve">
+    <value>• 앱은 시스템 트레이에 최소화된 상태로 실행됩니다</value>
+  </data>
+  <data name="LabelLanguage" xml:space="preserve">
+    <value>표시 언어</value>
+  </data>
+  <data name="LanguageZhTW" xml:space="preserve">
+    <value>繁體中文</value>
+  </data>
+  <data name="LanguageEn" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="ButtonReset" xml:space="preserve">
+    <value>기본값으로 초기화</value>
+  </data>
+  <data name="ButtonCancel" xml:space="preserve">
+    <value>취소</value>
+  </data>
+  <data name="ButtonSave" xml:space="preserve">
+    <value>저장</value>
+  </data>
+  <data name="SaveSuccessMessage" xml:space="preserve">
+    <value>설정을 저장했습니다!</value>
+  </data>
+  <data name="SaveSuccessLanguageChanged" xml:space="preserve">
+    <value>언어 설정이 변경되었습니다. 적용하려면 HoverPeek를 다시 시작하세요.</value>
+  </data>
+  <data name="SaveErrorMessage" xml:space="preserve">
+    <value>설정을 저장하지 못했습니다:
+
+{0}</value>
+  </data>
+  <data name="SaveErrorTitle" xml:space="preserve">
+    <value>HoverPeek 오류</value>
+  </data>
+  <data name="ResetConfirmMessage" xml:space="preserve">
+    <value>기본값으로 초기화하시겠습니까?
+
+사용자 지정 설정이 모두 지워집니다.</value>
+  </data>
+  <data name="FolderBack" xml:space="preserve">
+    <value>⬅ 상위 폴더로 돌아가기</value>
+  </data>
+  <data name="TabAbout" xml:space="preserve">
+    <value>정보</value>
+  </data>
+  <data name="AboutDescription" xml:space="preserve">
+    <value>이미지, 동영상, 텍스트, 압축 파일, 폴더 등 다양한 형식을 지원하는 가벼운 파일 미리 보기 도구입니다.</value>
+  </data>
+  <data name="AboutAuthorLabel" xml:space="preserve">
+    <value>개발자</value>
+  </data>
+  <data name="AboutGitHubLabel" xml:space="preserve">
+    <value>GitHub</value>
+  </data>
+  <data name="AboutLicenseLabel" xml:space="preserve">
+    <value>라이선스</value>
+  </data>
+  <data name="AboutFrameworkLabel" xml:space="preserve">
+    <value>런타임</value>
+  </data>
+  <data name="PreviewLoading" xml:space="preserve">
+    <value>불러오는 중…</value>
+  </data>
+  <data name="PreviewFailedTitle" xml:space="preserve">
+    <value>미리 볼 수 없음</value>
+  </data>
+  <data name="PreviewShowDetails" xml:space="preserve">
+    <value>세부 정보 표시</value>
+  </data>
+  <data name="PreviewCopyPath" xml:space="preserve">
+    <value>경로 복사</value>
+  </data>
+  <data name="BadgeTruncated" xml:space="preserve">
+    <value>잘림</value>
+  </data>
+  <data name="BadgeLowRes" xml:space="preserve">
+    <value>미리 보기 이미지</value>
+  </data>
+  <data name="MetaItems" xml:space="preserve">
+    <value>항목 {0}개</value>
+  </data>
+  <data name="HeaderModified" xml:space="preserve">
+    <value>수정한 날짜</value>
+  </data>
+  <data name="ArchiveEncryptedOrBroken" xml:space="preserve">
+    <value>압축 파일을 열 수 없습니다(암호화되었거나 손상되었을 수 있음)</value>
+  </data>
+  <data name="TrayPause" xml:space="preserve">
+    <value>미리 보기 일시 중지</value>
+  </data>
+  <data name="TrayResume" xml:space="preserve">
+    <value>미리 보기 다시 시작</value>
+  </data>
+  <data name="TrayOpenLog" xml:space="preserve">
+    <value>로그 폴더 열기</value>
+  </data>
+  <data name="TrayPausedTooltip" xml:space="preserve">
+    <value>HoverPeek(일시 중지됨)</value>
+  </data>
+  <data name="UnexpectedErrorLogged" xml:space="preserve">
+    <value>HoverPeek에서 예기치 않은 오류가 발생했습니다. 자세한 내용이 로그에 기록되었습니다:
+{0}</value>
+  </data>
+  <data name="SectionImage" xml:space="preserve">
+    <value>이미지</value>
+  </data>
+  <data name="SectionText" xml:space="preserve">
+    <value>텍스트</value>
+  </data>
+  <data name="SectionVideo" xml:space="preserve">
+    <value>동영상</value>
+  </data>
+  <data name="SectionArchive" xml:space="preserve">
+    <value>압축 파일</value>
+  </data>
+  <data name="SectionGeneral" xml:space="preserve">
+    <value>일반</value>
+  </data>
+  <data name="DescWindowWidth" xml:space="preserve">
+    <value>이미지 미리 보기 창은 이미지 비율에 맞게 축소되며 이 너비를 넘지 않습니다</value>
+  </data>
+  <data name="DescWindowHeight" xml:space="preserve">
+    <value>이미지 미리 보기 창은 이미지 비율에 맞게 축소되며 이 높이를 넘지 않습니다</value>
+  </data>
+  <data name="DescCenterWindow" xml:space="preserve">
+    <value>끄면 QTTabBar처럼 포인터 옆에 표시합니다</value>
+  </data>
+  <data name="DescFadeInDuration" xml:space="preserve">
+    <value>미리 보기가 나타날 때의 페이드 인 시간입니다. 0으로 설정하면 즉시 표시합니다</value>
+  </data>
+  <data name="LabelShowQuickThumbnail" xml:space="preserve">
+    <value>빠른 미리 보기 이미지 먼저 표시</value>
+  </data>
+  <data name="DescShowQuickThumbnail" xml:space="preserve">
+    <value>Windows 미리 보기 이미지 캐시의 이미지를 먼저 표시한 후 고화질 버전의 디코딩이 끝나면 교체합니다</value>
+  </data>
+  <data name="DescTextMaxFileSize" xml:space="preserve">
+    <value>이 크기를 넘는 파일은 앞부분만 지정된 크기만큼 불러오고 '잘림'으로 표시합니다</value>
+  </data>
+  <data name="DescTextMaxLines" xml:space="preserve">
+    <value>초과하는 줄은 표시하지 않고 '잘림'으로 표시합니다</value>
+  </data>
+  <data name="DescTextFontSize" xml:space="preserve">
+    <value>텍스트 및 코드 미리 보기에 사용할 글꼴 크기</value>
+  </data>
+  <data name="DescTextFontFamily" xml:space="preserve">
+    <value>텍스트 및 코드 미리 보기에 사용할 글꼴입니다. 설치된 글꼴 이름을 직접 입력할 수 있습니다</value>
+  </data>
+  <data name="DescLanguage" xml:space="preserve">
+    <value>표시 언어를 변경한 후 HoverPeek를 다시 시작하세요</value>
+  </data>
+  <data name="UnitMilliseconds" xml:space="preserve">
+    <value>ms</value>
+  </data>
+  <data name="UnitPixels" xml:space="preserve">
+    <value>px</value>
+  </data>
+  <data name="UnitMegabytes" xml:space="preserve">
+    <value>MB</value>
+  </data>
+  <data name="UnitLines" xml:space="preserve">
+    <value>줄</value>
+  </data>
+  <data name="UnitPoints" xml:space="preserve">
+    <value>pt</value>
+  </data>
+  <data name="IntegerRangeValidation" xml:space="preserve">
+    <value>{0}–{1} 사이의 정수를 입력하세요</value>
+  </data>
+  <data name="ButtonOpenSettingsFolder" xml:space="preserve">
+    <value>설정 폴더 열기</value>
+  </data>
+  <data name="ButtonOpenLogFolder" xml:space="preserve">
+    <value>로그 폴더 열기</value>
+  </data>
+  <data name="AboutAppName" xml:space="preserve">
+    <value>HoverPeek</value>
+  </data>
+  <data name="AboutAuthorValue" xml:space="preserve">
+    <value>kyosora</value>
+  </data>
+  <data name="AboutGitHubValue" xml:space="preserve">
+    <value>github.com/kyosora/HoverPeek</value>
+  </data>
+  <data name="AboutLicenseValue" xml:space="preserve">
+    <value>MIT License</value>
+  </data>
+</root>

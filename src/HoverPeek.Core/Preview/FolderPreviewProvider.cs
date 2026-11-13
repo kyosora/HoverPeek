@@ -13,9 +13,9 @@ public sealed class FolderPreviewProvider : IPreviewProvider
 
     public bool CanHandle(string filePath) => Directory.Exists(filePath);
 
-    public Task<PreviewResult> GeneratePreviewAsync(
-        string filePath, CancellationToken ct = default)
+    public Task<PreviewResult> GeneratePreviewAsync(PreviewRequest request, CancellationToken ct = default)
     {
+        var filePath = request.Path;
         return Task.Run(() =>
         {
             try
@@ -50,13 +50,10 @@ public sealed class FolderPreviewProvider : IPreviewProvider
                     SourcePath = filePath
                 };
             }
-            catch (OperationCanceledException)
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
             {
-                return new PreviewResult { Kind = PreviewKind.Unsupported };
-            }
-            catch
-            {
-                return new PreviewResult { Kind = PreviewKind.Unsupported };
+                // 沒權限或磁碟離線：顯示原因，不要裝作是不支援的格式
+                return PreviewResult.FromException(filePath, ex);
             }
         }, ct);
     }

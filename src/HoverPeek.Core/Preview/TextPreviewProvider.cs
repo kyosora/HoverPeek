@@ -1,167 +1,132 @@
 using HoverPeek.Core.Localization;
-using System.Text;
+using HoverPeek.Core.Text;
 using Markdig;
 
 namespace HoverPeek.Core.Preview;
 
 public sealed class TextPreviewProvider : IPreviewProvider
 {
-    private static readonly HashSet<string> SupportedExtensions = new(
-        StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         // 純文字
-        ".txt", ".md", ".log", ".rst",
+        ".txt", ".md", ".markdown", ".log", ".rst", ".nfo",
 
-        // 程式碼檔案
-        ".cs", ".py", ".js", ".ts", ".jsx", ".tsx",
+        // 程式碼
+        ".cs", ".py", ".js", ".mjs", ".cjs", ".ts", ".jsx", ".tsx",
         ".java", ".go", ".rs", ".c", ".cpp", ".h", ".hpp",
-        ".rb", ".php", ".swift", ".kt", ".scala",
+        ".rb", ".php", ".swift", ".kt", ".scala", ".lua", ".sql", ".gd",
 
         // 設定檔
-        ".json", ".xml", ".yaml", ".yml", ".toml",
-        ".config", ".ini", ".env", ".properties",
+        ".json", ".jsonc", ".xml", ".yaml", ".yml", ".toml",
+        ".config", ".ini", ".env", ".properties", ".editorconfig", ".gitignore",
 
-        // Web 相關
-        ".html", ".htm", ".css", ".scss", ".sass", ".less",
-        ".svg", ".vue",
+        // Web
+        ".html", ".htm", ".css", ".scss", ".sass", ".less", ".vue", ".svelte",
 
-        // 文件
+        // 表格
         ".csv", ".tsv",
 
-        // Shell/Script
-        ".sh", ".bash", ".bat", ".ps1", ".cmd"
+        // Shell
+        ".sh", ".bash", ".bat", ".ps1", ".psm1", ".cmd",
+
+        // 專案檔
+        ".csproj", ".sln", ".slnx", ".props", ".targets", ".xaml",
     };
 
-    private long _maxFileSizeBytes;
-    private int _maxPreviewLines;
-
-    public TextPreviewProvider(long maxFileSizeBytes = 1024 * 1024, int maxPreviewLines = 1000)
+    private static readonly HashSet<string> MarkdownExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        _maxFileSizeBytes = maxFileSizeBytes;
-        _maxPreviewLines = maxPreviewLines;
-    }
+        ".md", ".markdown",
+    };
 
-    public void UpdateSettings(long maxFileSize, int maxLines)
-    {
-        _maxFileSizeBytes = maxFileSize;
-        _maxPreviewLines = maxLines;
-    }
+    // Markdig 管線建一次就好，執行緒安全
+    private static readonly MarkdownPipeline MarkdownPipeline =
+        new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
 
-    public bool CanHandle(string filePath)
-    {
-        var ext = Path.GetExtension(filePath);
-        return SupportedExtensions.Contains(ext);
-    }
+    public bool CanHandle(string filePath) => SupportedExtensions.Contains(Path.GetExtension(filePath));
 
-    public Task<PreviewResult> GeneratePreviewAsync(
-        string filePath, CancellationToken ct = default)
+    public Task<PreviewResult> GeneratePreviewAsync(PreviewRequest request, CancellationToken ct = default) =>
+        Task.Run(() => Read(request, ct), ct);
+
+    private static PreviewResult Read(PreviewRequest request, CancellationToken ct)
     {
-        return Task.Run(() =>
+        var path = request.Path;
+        var fileSize = new FileInfo(path).Length;
+        var byteLimit = (int)Math.Min(fileSize, Math.Max(1024, request.TextMaxBytes));
+        var truncatedBySize = fileSize > byteLimit;
+
+        var buffer = new byte[byteLimit];
+        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            stream.ReadExactly(buffer);
+
+        ct.ThrowIfCancellationRequested();
+
+        if (LooksBinary(buffer))
+            return PreviewResult.Unsupported(path);
+
+        var decoded = TextEncodingDetector.Decode(buffer, truncated: truncatedBySize);
+        var (content, truncatedByLines) = LimitLines(decoded.Text, request.TextMaxLines);
+        var truncated = truncatedBySize || truncatedByLines;
+
+        var extension = Path.GetExtension(path);
+        var isMarkdown = request.RenderMarkdown && MarkdownExtensions.Contains(extension);
+        string? html = null;
+        if (isMarkdown)
         {
             try
             {
-                if (!File.Exists(filePath))
-                {
-                    throw new FileNotFoundException(Strings.Format("FileNotFound", filePath));
-                }
-
-                var fileInfo = new FileInfo(filePath);
-
-                // 檢查檔案大小
-                if (fileInfo.Length > _maxFileSizeBytes)
-                {
-                    return new PreviewResult
-                    {
-                        Kind = PreviewKind.Text,
-                        TextContent = $"{Strings.FileTooLargeTitle}\n\n{Strings.Format("FileSizeLabel", FormatFileSize(fileInfo.Length))}\n{Strings.Format("MaxSizeLabel", FormatFileSize(_maxFileSizeBytes))}",
-                        TextEncoding = "N/A",
-                        FileExtension = Path.GetExtension(filePath)
-                    };
-                }
-
-                // 嘗試讀取文字內容
-                string content;
-                string encodingName;
-
-                try
-                {
-                    content = File.ReadAllText(filePath, Encoding.UTF8);
-                    encodingName = "UTF-8";
-                }
-                catch
-                {
-                    try
-                    {
-                        content = File.ReadAllText(filePath, Encoding.Default);
-                        encodingName = Encoding.Default.EncodingName;
-                    }
-                    catch
-                    {
-                        var big5 = Encoding.GetEncoding("big5");
-                        content = File.ReadAllText(filePath, big5);
-                        encodingName = "Big5";
-                    }
-                }
-
-                ct.ThrowIfCancellationRequested();
-
-                // 限制行數
-                var lines = content.Split('\n');
-                if (lines.Length > _maxPreviewLines)
-                {
-                    var truncatedLines = lines.Take(_maxPreviewLines).ToArray();
-                    content = string.Join('\n', truncatedLines);
-                    content += $"\n\n{Strings.Format("TruncatedMessage", _maxPreviewLines, lines.Length)}";
-                }
-
-                // 檢查是否為 Markdown 檔案
-                var extension = Path.GetExtension(filePath);
-                var isMarkdown = extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
-                                 extension.Equals(".markdown", StringComparison.OrdinalIgnoreCase);
-
-                string? markdownHtml = null;
-                if (isMarkdown)
-                {
-                    try
-                    {
-                        var pipeline = new MarkdownPipelineBuilder()
-                            .UseAdvancedExtensions()
-                            .Build();
-                        markdownHtml = Markdown.ToHtml(content, pipeline);
-                    }
-                    catch
-                    {
-                        isMarkdown = false;
-                    }
-                }
-
-                return new PreviewResult
-                {
-                    Kind = PreviewKind.Text,
-                    TextContent = content,
-                    TextEncoding = encodingName,
-                    FileExtension = extension,
-                    IsMarkdown = isMarkdown,
-                    MarkdownHtml = markdownHtml
-                };
+                html = Markdown.ToHtml(content, MarkdownPipeline);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception)
             {
-                throw new Exception(Strings.Format("ReadTextFailed", filePath), ex);
+                // Markdown 解析失敗時退回純文字顯示，內容仍然可讀
+                isMarkdown = false;
             }
-        }, ct);
+        }
+
+        if (truncated)
+            content += "\n\n" + Strings.Format("TruncatedMessage", request.TextMaxLines, CountLinesApprox(decoded.Text));
+
+        return new PreviewResult
+        {
+            Kind = PreviewKind.Text,
+            TextContent = content,
+            TextEncoding = decoded.EncodingName,
+            FileExtension = extension,
+            IsMarkdown = isMarkdown,
+            MarkdownHtml = html,
+            IsTruncated = truncated,
+            SourcePath = path,
+            FileSize = fileSize,
+        };
     }
 
-    private static string FormatFileSize(long bytes)
+    /// <summary>只取前 maxLines 行，不先 Split 整份字串。</summary>
+    internal static (string Text, bool Truncated) LimitLines(string text, int maxLines)
     {
-        string[] sizes = { "B", "KB", "MB", "GB" };
-        double len = bytes;
-        int order = 0;
-        while (len >= 1024 && order < sizes.Length - 1)
+        if (maxLines <= 0)
+            return (text, false);
+
+        var index = -1;
+        for (var line = 0; line < maxLines; line++)
         {
-            order++;
-            len = len / 1024;
+            index = text.IndexOf('\n', index + 1);
+            if (index < 0)
+                return (text, false);
         }
-        return $"{len:0.##} {sizes[order]}";
+
+        return index + 1 >= text.Length ? (text, false) : (text[..index], true);
+    }
+
+    private static int CountLinesApprox(string text) => text.AsSpan().Count('\n') + 1;
+
+    /// <summary>
+    /// 前 8KB 出現 NUL 就當成二進位檔（例如被誤命名成 .log 的 dump）。
+    /// UTF-16 有 BOM 時例外，它本來就含大量 0x00。
+    /// </summary>
+    internal static bool LooksBinary(ReadOnlySpan<byte> bytes)
+    {
+        if (bytes is [0xFF, 0xFE, ..] or [0xFE, 0xFF, ..])
+            return false;
+        return bytes[..Math.Min(bytes.Length, 8192)].Contains((byte)0);
     }
 }

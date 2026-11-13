@@ -1,3 +1,4 @@
+using HoverPeek.Core.Imaging;
 using HoverPeek.Core.Localization;
 using SkiaSharp;
 
@@ -5,159 +6,107 @@ namespace HoverPeek.Core.Preview;
 
 public sealed class ImagePreviewProvider : IPreviewProvider
 {
-    private static readonly HashSet<string> SupportedExtensions = new(
-        StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp",
-        ".ico", ".tiff", ".tif", ".avif"
+        ".jpg", ".jpeg", ".jfif", ".png", ".gif", ".bmp", ".webp",
+        ".ico", ".tiff", ".tif", ".avif", ".heic", ".heif", ".wbmp",
     };
 
-    private int _maxPreviewDimension;
+    private readonly ShellThumbnailProvider? _shellFallback;
 
-    public ImagePreviewProvider(int maxPreviewDimension = 800)
+    /// <param name="shellFallback">
+    /// Skia 解不了的格式（AVIF、HEIC…）改用系統 WIC codec；傳 null 則不做後備。
+    /// </param>
+    public ImagePreviewProvider(ShellThumbnailProvider? shellFallback = null)
     {
-        _maxPreviewDimension = maxPreviewDimension;
+        _shellFallback = shellFallback;
     }
 
-    public void UpdateSettings(int maxDimension)
-    {
-        _maxPreviewDimension = maxDimension;
-    }
+    public bool CanHandle(string filePath) => SupportedExtensions.Contains(Path.GetExtension(filePath));
 
-    public bool CanHandle(string filePath)
+    public async Task<PreviewResult> GeneratePreviewAsync(PreviewRequest request, CancellationToken ct = default)
     {
-        var ext = Path.GetExtension(filePath);
-        return SupportedExtensions.Contains(ext);
-    }
+        var path = request.Path;
+        var fileSize = new FileInfo(path).Length;
+        if (fileSize == 0)
+            throw new InvalidOperationException(Strings.Format("FileEmpty", path));
 
-    public Task<PreviewResult> GeneratePreviewAsync(
-        string filePath, CancellationToken ct = default)
-    {
-        return Task.Run(() =>
+        var result = await Task.Run(() => DecodeFile(request, fileSize), ct).ConfigureAwait(false);
+        if (result != null)
+            return result;
+
+        // Skia 不認得這個格式 → 請 Windows 解（需要對應的 WIC codec，例如 HEIF／AV1 擴充功能）
+        if (_shellFallback != null)
         {
-            try
-            {
-                if (!File.Exists(filePath))
-                {
-                    throw new FileNotFoundException(Strings.Format("FileNotFound", filePath));
-                }
-
-                var bytes = File.ReadAllBytes(filePath);
-
-                if (bytes == null || bytes.Length == 0)
-                {
-                    throw new InvalidOperationException(Strings.Format("FileEmpty", filePath));
-                }
-
-                var result = GenerateFromBytes(bytes);
-
-                if (result.Kind == PreviewKind.Unsupported)
-                {
-                    throw new NotSupportedException(Strings.Format("CannotDecodeImage", filePath, bytes.Length));
-                }
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(Strings.Format("GeneratePreviewFailed", filePath), ex);
-            }
-        }, ct);
-    }
-
-    /// <summary>
-    /// 從原始位元組產生預覽，也用於壓縮包內的圖片。
-    /// 大圖會縮放到 _maxPreviewDimension 以內，節省記憶體。
-    /// </summary>
-    public PreviewResult GenerateFromBytes(byte[] rawBytes)
-    {
-        try
-        {
-            using var inputStream = new MemoryStream(rawBytes);
-            using var codec = SKCodec.Create(inputStream);
-
-            if (codec == null)
-            {
-                var header = rawBytes.Length >= 16
-                    ? BitConverter.ToString(rawBytes.Take(16).ToArray())
-                    : Strings.FileTooSmallHeader;
-                throw new NotSupportedException(Strings.Format("SKCodecNull", rawBytes.Length, header));
-            }
-
-            var info = codec.Info;
-            var format = codec.EncodedFormat;
-
-            // GIF 特殊處理：保留原始位元組以支援動畫
-            if (format == SKEncodedImageFormat.Gif)
-            {
-                return new PreviewResult
-                {
-                    Kind = PreviewKind.Image,
-                    ImageData = rawBytes,  // 直接使用原始 GIF 資料
-                    ImageWidth = info.Width,
-                    ImageHeight = info.Height,
-                    ImageFormat = "Gif"
-                };
-            }
-
-            using var originalBitmap = SKBitmap.Decode(codec);
-
-            if (originalBitmap == null)
-            {
-                throw new InvalidOperationException(Strings.Format("SKBitmapDecodeNull", info.Width, info.Height));
-            }
-
-            var scale = CalculateScale(originalBitmap.Width, originalBitmap.Height);
-            var scaledWidth = (int)(originalBitmap.Width * scale);
-            var scaledHeight = (int)(originalBitmap.Height * scale);
-
-            SKBitmap finalBitmap;
-            if (scale < 1.0)
-            {
-                var scaledInfo = new SKImageInfo(scaledWidth, scaledHeight);
-                finalBitmap = originalBitmap.Resize(scaledInfo, SKFilterQuality.High);
-
-                if (finalBitmap == null)
-                {
-                    throw new InvalidOperationException(Strings.Format("ResizeNull", originalBitmap.Width, originalBitmap.Height, scaledWidth, scaledHeight));
-                }
-            }
-            else
-            {
-                finalBitmap = originalBitmap;
-            }
-
-            using var image = SKImage.FromBitmap(finalBitmap);
-            using var data = image.Encode(SKEncodedImageFormat.Png, 90);
-
-            if (finalBitmap != originalBitmap)
-            {
-                finalBitmap.Dispose();
-            }
-
-            return new PreviewResult
-            {
-                Kind = PreviewKind.Image,
-                ImageData = data.ToArray(),
-                ImageWidth = scaledWidth,
-                ImageHeight = scaledHeight,
-                ImageFormat = codec.EncodedFormat.ToString()
-            };
+            var image = await _shellFallback
+                .GetAsync(path, request.MaxImagePixels, request.DpiScale, cacheOnly: false, ct)
+                .ConfigureAwait(false);
+            if (image != null)
+                return ToResult(image, Path.GetExtension(path).TrimStart('.').ToUpperInvariant(), path, fileSize);
         }
-        catch (Exception ex)
-        {
-            throw new Exception(Strings.Format("GenerateFromBytesFailed", rawBytes?.Length ?? 0), ex);
-        }
+
+        throw new NotSupportedException(Strings.Format("CannotDecodeImage", path, fileSize));
     }
 
-    private double CalculateScale(int width, int height)
+    /// <summary>壓縮檔內的圖片：已經在記憶體裡，不做系統後備（Shell 只吃檔案路徑）。</summary>
+    public PreviewResult GenerateFromBytes(byte[] bytes, PreviewRequest request)
     {
-        if (width <= _maxPreviewDimension &&
-            height <= _maxPreviewDimension)
-            return 1.0;
+        ArgumentNullException.ThrowIfNull(bytes);
+        if (bytes.Length == 0)
+            throw new InvalidOperationException(Strings.Format("FileEmpty", request.Path));
 
-        var scaleX = (double)_maxPreviewDimension / width;
-        var scaleY = (double)_maxPreviewDimension / height;
-        return Math.Min(scaleX, scaleY);
+        if (request.AnimateGif && SkiaImageDecoder.IsGif(bytes))
+            return ToGifResult(bytes, request.Path, bytes.Length);
+
+        var image = SkiaImageDecoder.TryDecode(bytes, request.MaxImagePixels, request.DpiScale)
+                    ?? throw new NotSupportedException(Strings.Format("CannotDecodeImage", request.Path, bytes.Length));
+        return ToResult(image, image.Format ?? "?", request.Path, bytes.Length);
     }
+
+    private static PreviewResult? DecodeFile(PreviewRequest request, long fileSize)
+    {
+        using var stream = new FileStream(
+            request.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete,
+            bufferSize: 64 * 1024, FileOptions.RandomAccess);
+
+        Span<byte> header = stackalloc byte[6];
+        var read = stream.Read(header);
+        stream.Position = 0;
+
+        if (request.AnimateGif && SkiaImageDecoder.IsGif(header[..read]))
+        {
+            var bytes = new byte[fileSize];
+            stream.ReadExactly(bytes);
+            return ToGifResult(bytes, request.Path, fileSize);
+        }
+
+        var image = SkiaImageDecoder.TryDecode(stream, request.MaxImagePixels, request.DpiScale);
+        return image == null ? null : ToResult(image, image.Format ?? "?", request.Path, fileSize);
+    }
+
+    private static PreviewResult ToGifResult(byte[] bytes, string path, long fileSize)
+    {
+        using var codec = SKCodec.Create(new MemoryStream(bytes, writable: false));
+        return new PreviewResult
+        {
+            Kind = PreviewKind.Image,
+            AnimatedGifData = bytes,
+            ImageWidth = codec?.Info.Width ?? 0,
+            ImageHeight = codec?.Info.Height ?? 0,
+            ImageFormat = "GIF",
+            SourcePath = path,
+            FileSize = fileSize,
+        };
+    }
+
+    private static PreviewResult ToResult(DecodedImage image, string format, string path, long fileSize) => new()
+    {
+        Kind = PreviewKind.Image,
+        Image = image,
+        ImageWidth = image.SourceWidth > 0 ? image.SourceWidth : image.Width,
+        ImageHeight = image.SourceHeight > 0 ? image.SourceHeight : image.Height,
+        ImageFormat = format,
+        SourcePath = path,
+        FileSize = fileSize,
+    };
 }

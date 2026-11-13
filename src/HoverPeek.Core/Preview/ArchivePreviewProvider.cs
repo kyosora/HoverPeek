@@ -15,8 +15,9 @@ public sealed class ArchivePreviewProvider : IPreviewProvider
     private static readonly HashSet<string> ImageExtensions = new(
         StringComparer.OrdinalIgnoreCase)
     {
-        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp",
-        ".ico", ".tiff", ".tif", ".svg", ".avif"
+        // 壓縮檔內的圖只能走 Skia（系統縮圖需要實體檔案路徑），所以不列 SVG／AVIF／HEIC
+        ".jpg", ".jpeg", ".jfif", ".png", ".gif", ".bmp", ".webp",
+        ".ico", ".tiff", ".tif"
     };
 
     private const int MaxEntries = 2000;
@@ -24,6 +25,7 @@ public sealed class ArchivePreviewProvider : IPreviewProvider
     private readonly ImagePreviewProvider _imageProvider;
 
     // 輕量快取：只保留最後一個壓縮包的圖片解壓結果，避免 mouse move 時重複開檔
+    private readonly object _cacheLock = new();
     private string? _cachedArchivePath;
     private readonly ConcurrentDictionary<string, PreviewResult> _imageCache = new();
     private const int MaxCachedImages = 8;
@@ -39,9 +41,9 @@ public sealed class ArchivePreviewProvider : IPreviewProvider
         return SupportedExtensions.Contains(ext);
     }
 
-    public Task<PreviewResult> GeneratePreviewAsync(
-        string filePath, CancellationToken ct = default)
+    public Task<PreviewResult> GeneratePreviewAsync(PreviewRequest request, CancellationToken ct = default)
     {
+        var filePath = request.Path;
         return Task.Run(() =>
         {
             try
@@ -105,16 +107,15 @@ public sealed class ArchivePreviewProvider : IPreviewProvider
                 return new PreviewResult
                 {
                     Kind = PreviewKind.Archive,
-                    Entries = entries
+                    Entries = entries,
+                    SourcePath = filePath,
+                    FileSize = new FileInfo(filePath).Length,
                 };
             }
-            catch (OperationCanceledException)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return new PreviewResult { Kind = PreviewKind.Unsupported };
-            }
-            catch
-            {
-                return new PreviewResult { Kind = PreviewKind.Unsupported };
+                // 加密、損毀或格式不支援：把原因顯示出來
+                return PreviewResult.FromException(filePath, ex);
             }
         }, ct);
     }
@@ -124,7 +125,7 @@ public sealed class ArchivePreviewProvider : IPreviewProvider
     /// 帶有輕量快取，避免滑鼠移動時重複解壓。
     /// </summary>
     public PreviewResult PreviewImageInArchive(
-        string archivePath, string entryPath)
+        string archivePath, string entryPath, PreviewRequest template)
     {
         InvalidateCacheIfNeeded(archivePath);
 
@@ -146,7 +147,7 @@ public sealed class ArchivePreviewProvider : IPreviewProvider
             using var ms = new MemoryStream();
             stream.CopyTo(ms);
 
-            var result = _imageProvider.GenerateFromBytes(ms.ToArray());
+            var result = _imageProvider.GenerateFromBytes(ms.ToArray(), template with { Path = entryPath });
 
             // 快取滿了就全清，保持記憶體用量小
             if (_imageCache.Count >= MaxCachedImages)
@@ -155,18 +156,21 @@ public sealed class ArchivePreviewProvider : IPreviewProvider
             _imageCache.TryAdd(entryPath, result);
             return result;
         }
-        catch
+        catch (Exception ex)
         {
-            return new PreviewResult { Kind = PreviewKind.Unsupported };
+            return PreviewResult.FromException(entryPath, ex);
         }
     }
 
     private void InvalidateCacheIfNeeded(string archivePath)
     {
-        if (!string.Equals(_cachedArchivePath, archivePath, StringComparison.OrdinalIgnoreCase))
+        lock (_cacheLock)
         {
-            _cachedArchivePath = archivePath;
-            _imageCache.Clear();
+            if (!string.Equals(_cachedArchivePath, archivePath, StringComparison.OrdinalIgnoreCase))
+            {
+                _cachedArchivePath = archivePath;
+                _imageCache.Clear();
+            }
         }
     }
 }

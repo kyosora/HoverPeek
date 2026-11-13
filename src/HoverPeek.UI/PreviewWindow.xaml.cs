@@ -1,728 +1,209 @@
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Interop;
-using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
-using HoverPeek.Core.Localization;
+using HoverPeek.Core.Interop;
 using HoverPeek.Core.Preview;
-using LibVLCSharp.Shared;
-using ICSharpCode.AvalonEdit.Highlighting;
+using HoverPeek.Core.Settings;
+using HoverPeek.UI.Themes;
 
 namespace HoverPeek.UI;
 
-public partial class PreviewWindow : Window
+/// <summary>預覽視窗依附的螢幕位置：游標座標（實體像素）與該螢幕的縮放比例。</summary>
+public readonly record struct PreviewAnchor(int CursorX, int CursorY, double DpiScale);
+
+/// <summary>預覽視窗需要向外要資料時的介面（資料夾雙擊、壓縮檔內圖片…），由 App 實作。</summary>
+public interface IPreviewHost
 {
-    private const int GWL_EXSTYLE = -20;
-    private const int WS_EX_NOACTIVATE = 0x08000000;
-    private const int WS_EX_TOOLWINDOW = 0x00000080;
+    Task<PreviewResult> PreviewPathAsync(string path, double dpiScale);
+    Task<PreviewResult> PreviewArchiveEntryAsync(string archivePath, string entryPath, double dpiScale);
+}
 
-    private string? _currentArchivePath;
-    private PreviewKind _currentListKind;
-    private IReadOnlyList<ArchiveEntry>? _currentEntries;
-    private readonly System.Action<string, string>? _onImageInArchiveHover;
-    private readonly System.Action<string, System.Action<PreviewResult>>? _onFolderNavigate;
-    private readonly System.Action<string, System.Action<PreviewResult>>? _onFilePreviewRequested;
-    private bool _isMouseInside;
+/// <summary>
+/// 懸停預覽視窗。不搶焦點（WS_EX_NOACTIVATE），位置與大小一律用實體像素透過 SetWindowPos 設定，
+/// 才能在多螢幕、不同縮放比例下放在正確位置（WPF 的 Left/Top 是 DIP，跨螢幕時換算會錯）。
+/// </summary>
+public sealed partial class PreviewWindow : Window
+{
+    private const double MinContentWidth = 320;
+    private const double MinContentHeight = 120;
+    private const double ImagePadding = 16; // ImageView 的 Margin 兩側合計
 
-    private readonly Stack<string> _folderHistory = new();
-    private string? _currentFolderPath;
-    private bool _isPreviewingFileInFolder;
+    private readonly IPreviewHost _host;
+    private AppSettings _settings = AppSettings.Default;
+    private PreviewAnchor _anchor;
+    private PreviewResult? _current;
+    private bool _isLoading;
+    private IntPtr _hwnd;
 
-    private LibVLC? _libVLC;
-    private LibVLCSharp.Shared.MediaPlayer? _mediaPlayer;
-
-    private double _windowWidth = 800;
-    private double _windowHeight = 600;
-    private bool _centerWindow = true;
-
-    public PreviewWindow(
-        System.Action<string, string>? onImageInArchiveHover = null,
-        System.Action<string, System.Action<PreviewResult>>? onFolderNavigate = null,
-        System.Action<string, System.Action<PreviewResult>>? onFilePreviewRequested = null)
+    public PreviewWindow(IPreviewHost host)
     {
+        _host = host ?? throw new ArgumentNullException(nameof(host));
+        ThemeManager.Attach(this);
         InitializeComponent();
-        _onImageInArchiveHover = onImageInArchiveHover;
-        _onFolderNavigate = onFolderNavigate;
-        _onFilePreviewRequested = onFilePreviewRequested;
+        ThemeManager.ThemeChanged += OnThemeChanged;
 
-        MouseEnter += (s, e) => _isMouseInside = true;
-        MouseLeave += (s, e) => _isMouseInside = false;
+        // 先建好 HWND，第一次預覽時不必等建立視窗
+        _hwnd = new WindowInteropHelper(this).EnsureHandle();
     }
 
-    public bool IsMouseInside => _isMouseInside;
+    /// <summary>目前顯示中的檔案路徑；資料夾內點進去的檔案也算。</summary>
+    public string? ShownPath => IsVisible ? _current?.SourcePath : null;
 
-    public event System.Action? PreviewMouseLeft;
+    /// <summary>
+    /// 是否已在顯示這個檔案的完整預覽（不是載入中、也不是占位縮圖）。
+    /// 用來判斷懸停時要不要重畫：載入中的畫面必須能被同一檔案的下一次懸停取代。
+    /// </summary>
+    public bool IsShowingComplete(string path) =>
+        IsVisible && !_isLoading && _current is { IsPlaceholder: false } c
+        && string.Equals(c.SourcePath, path, StringComparison.OrdinalIgnoreCase);
 
-    public void UpdateSettings(double width, double height, bool centerWindow, int fadeInMs, int fadeOutMs)
+    public void ApplySettings(AppSettings settings)
     {
-        _windowWidth = width;
-        _windowHeight = height;
-        _centerWindow = centerWindow;
-
-        var fadeIn = (Storyboard)Resources["FadeIn"];
-        var fadeOut = (Storyboard)Resources["FadeOut"];
-        ((DoubleAnimation)fadeIn.Children[0]).Duration = TimeSpan.FromMilliseconds(fadeInMs);
-        ((DoubleAnimation)fadeOut.Children[0]).Duration = TimeSpan.FromMilliseconds(fadeOutMs);
+        _settings = settings?.Clone() ?? throw new ArgumentNullException(nameof(settings));
+        ApplyTextSettings();
     }
 
-    public bool IsMouseNearWindow(int mouseX, int mouseY)
+    /// <summary>游標是否在預覽視窗範圍內（用實體座標判斷，不依賴 WPF 的 MouseEnter）。</summary>
+    public bool ContainsCursor()
     {
-        if (!IsVisible || Opacity < 0.1)
+        if (!IsVisible)
             return false;
+        var rect = DisplayInfo.GetWindowRect(_hwnd);
+        var (x, y) = DisplayInfo.GetCursorPosition();
+        return rect?.Contains(x, y) == true;
+    }
 
-        const int buffer = 150;
+    public void ShowLoading(string path, PreviewAnchor anchor)
+    {
+        _anchor = anchor;
+        _isLoading = true;
+        _current = new PreviewResult { Kind = PreviewKind.Unsupported, SourcePath = path };
+        ResetContent();
+        SetHeader(path, Glyphs.Loading, string.Empty);
+        ShowMessage(Glyphs.Loading, Core.Localization.Strings.PreviewLoading, null, null);
+        PlaceAndShow(DefaultContentSize());
+    }
 
-        var windowLeft = Left;
-        var windowTop = Top;
-        var windowRight = Left + ActualWidth;
-        var windowBottom = Top + ActualHeight;
+    /// <summary>
+    /// 顯示預覽。若目前正顯示同一檔案的占位縮圖，這次是清晰版，就只換圖不重排版面。
+    /// </summary>
+    public void ShowResult(PreviewResult result, PreviewAnchor anchor)
+    {
+        ArgumentNullException.ThrowIfNull(result);
 
-        return mouseX >= windowLeft - buffer &&
-               mouseX <= windowRight + buffer &&
-               mouseY >= windowTop - buffer &&
-               mouseY <= windowBottom + buffer;
+        var isUpgrade = IsVisible
+                        && _current is { IsPlaceholder: true }
+                        && result.Kind == PreviewKind.Image
+                        && string.Equals(_current.SourcePath, result.SourcePath, StringComparison.OrdinalIgnoreCase);
+
+        _anchor = anchor;
+        _isLoading = false;
+        _current = result;
+
+        if (!isUpgrade)
+            ResetContent();
+
+        var contentSize = RenderContent(result);
+        PlaceAndShow(contentSize, fade: !isUpgrade);
+    }
+
+    public void HidePreview()
+    {
+        if (!IsVisible)
+            return;
+
+        StopVideo();
+        Hide();
+        ResetContent();
+        _current = null;
+        _isLoading = false;
+    }
+
+    private Size DefaultContentSize() =>
+        new(_settings.WindowWidth, Math.Max(MinContentHeight, _settings.WindowHeight - HeaderHeight()));
+
+    private double HeaderHeight()
+    {
+        if (HeaderBar.ActualHeight > 0)
+            return HeaderBar.ActualHeight;
+        HeaderBar.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        return HeaderBar.DesiredSize.Height;
+    }
+
+    /// <summary>依內容大小（DIP）算出視窗大小，換成實體像素放到游標旁或螢幕中央。</summary>
+    private void PlaceAndShow(Size contentSize, bool fade = true)
+    {
+        var header = HeaderHeight();
+        var widthDip = Math.Clamp(contentSize.Width, MinContentWidth, _settings.WindowWidth);
+        var heightDip = Math.Clamp(contentSize.Height + header, MinContentHeight + header, _settings.WindowHeight);
+
+        var scale = _anchor.DpiScale > 0 ? _anchor.DpiScale : 1.0;
+        var work = DisplayInfo.GetWorkAreaAt(_anchor.CursorX, _anchor.CursorY);
+        var rect = WindowPlacement.Compute(
+            _anchor.CursorX, _anchor.CursorY,
+            (int)Math.Ceiling(widthDip * scale), (int)Math.Ceiling(heightDip * scale),
+            work, _settings.CenterWindow, scale);
+
+        var wasVisible = IsVisible;
+        if (!wasVisible && fade && _settings.FadeInDurationMs > 0)
+            RootGrid.Opacity = 0;
+
+        // 先只移動：跨到不同 DPI 的螢幕時 WPF 會依 WM_DPICHANGED 調整大小，第二次再設定真正的尺寸
+        SetWindowPos(_hwnd, HWND_TOPMOST, rect.Left, rect.Top, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
+        SetWindowPos(_hwnd, HWND_TOPMOST, rect.Left, rect.Top, rect.Width, rect.Height, SWP_NOACTIVATE);
+
+        if (!wasVisible)
+        {
+            Show();
+            if (fade && _settings.FadeInDurationMs > 0)
+                FadeInContent();
+        }
+    }
+
+    private void FadeInContent()
+    {
+        var animation = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(_settings.FadeInDurationMs))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        };
+        RootGrid.BeginAnimation(OpacityProperty, animation);
+    }
+
+    private void OnThemeChanged()
+    {
+        if (_current is { IsMarkdown: true, MarkdownHtml: not null } md && MarkdownView.Visibility == Visibility.Visible)
+            _ = ShowMarkdownAsync(md.MarkdownHtml);
     }
 
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-
         var hwnd = new WindowInteropHelper(this).Handle;
-        var extStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-        SetWindowLong(hwnd, GWL_EXSTYLE, extStyle | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW);
-    }
-
-    public void ShowPreview(PreviewResult result, string filePath, int mouseX, int mouseY)
-    {
-        BeginAnimation(OpacityProperty, null);
-        Opacity = 0;
-        HideAllPanels();
-        Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Render);
-
-        switch (result.Kind)
-        {
-            case PreviewKind.Image:
-                ShowImagePreview(result);
-                break;
-            case PreviewKind.Archive:
-                ShowArchivePreview(result, filePath);
-                break;
-            case PreviewKind.Folder:
-                ShowFolderPreview(result, filePath);
-                break;
-            case PreviewKind.Video:
-                ShowVideoPreview(result);
-                break;
-            case PreviewKind.Text:
-                ShowTextPreview(result, filePath);
-                break;
-            case PreviewKind.Unsupported:
-                ShowUnsupportedPreview();
-                break;
-        }
-
-        PositionWindow(mouseX, mouseY);
-        FadeIn();
-    }
-
-    private void ShowImagePreview(PreviewResult result)
-    {
-        if (result.ImageData == null) return;
-
-        using var ms = new MemoryStream(result.ImageData);
-        var bitmap = new BitmapImage();
-        bitmap.BeginInit();
-        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-        bitmap.StreamSource = ms;
-        bitmap.EndInit();
-        bitmap.Freeze();
-
-        if (result.ImageFormat == "Gif")
-        {
-            WpfAnimatedGif.ImageBehavior.SetAnimatedSource(ImagePreview, bitmap);
-        }
-        else
-        {
-            WpfAnimatedGif.ImageBehavior.SetAnimatedSource(ImagePreview, null);
-            ImagePreview.Source = bitmap;
-        }
-
-        ImagePreview.Visibility = Visibility.Visible;
-    }
-
-    private void ShowArchivePreview(PreviewResult result, string archivePath)
-    {
-        _currentArchivePath = archivePath;
-        _currentListKind = PreviewKind.Archive;
-        _currentEntries = result.Entries;
-
-        ArchiveTitle.Text = $"\U0001f4e6 {System.IO.Path.GetFileName(archivePath)} ({Strings.Format("ArchiveItemCount", result.Entries?.Count ?? 0)})";
-        ArchivePanel.Visibility = Visibility.Visible;
-        ExpandButton.Visibility = Visibility.Visible;
-
-        var contentGrid = (Grid)ArchivePanel.FindName("ContentGrid");
-        if (contentGrid != null)
-        {
-            var displayItems = _currentEntries?
-                .Select(entry => new ArchiveDisplayItem(entry))
-                .ToList();
-
-            FileListView.ItemsSource = displayItems;
-            contentGrid.Visibility = Visibility.Visible;
-            ExpandButton.Content = Strings.CollapseFileList;
-        }
-
-        InnerImagePreview.Visibility = Visibility.Collapsed;
-    }
-
-    private void ShowFolderPreview(PreviewResult result, string folderPath)
-    {
-        _currentArchivePath = folderPath;
-        _currentListKind = PreviewKind.Folder;
-        _currentEntries = result.Entries;
-        _currentFolderPath = folderPath;
-        _folderHistory.Clear();
-        BackButton.Visibility = Visibility.Collapsed;
-
-        ArchiveTitle.Text = $"\U0001f4c1 {System.IO.Path.GetFileName(folderPath)} ({Strings.Format("FolderItemCount", result.Entries?.Count ?? 0)})";
-        ArchivePanel.Visibility = Visibility.Visible;
-        ExpandButton.Visibility = Visibility.Visible;
-
-        var contentGrid = (Grid)ArchivePanel.FindName("ContentGrid");
-        if (contentGrid != null)
-        {
-            var displayItems = _currentEntries?
-                .Select(entry => new ArchiveDisplayItem(entry))
-                .ToList();
-
-            FileListView.ItemsSource = displayItems;
-            contentGrid.Visibility = Visibility.Visible;
-            ExpandButton.Content = Strings.CollapseFileList;
-        }
-
-        InnerImagePreview.Visibility = Visibility.Collapsed;
-    }
-
-    private void ShowTextPreview(PreviewResult result, string filePath)
-    {
-        if (string.IsNullOrEmpty(result.TextContent))
-        {
-            ShowUnsupportedPreview();
-            return;
-        }
-
-        var fileName = System.IO.Path.GetFileName(filePath);
-        var extension = result.FileExtension ?? "";
-        var encoding = result.TextEncoding ?? Strings.EncodingUnknown;
-
-        if (result.IsMarkdown && !string.IsNullOrEmpty(result.MarkdownHtml))
-        {
-            TextPreviewHeader.Text = $"\U0001f4c4 {fileName} ({encoding})";
-            TextPreviewContent.Text = result.TextContent;
-            TextPreviewScroll.Visibility = Visibility.Visible;
-            _ = InitializeAndShowMarkdown(result.MarkdownHtml);
-            return;
-        }
-
-        var syntaxHighlighting = GetSyntaxHighlighting(extension);
-        if (syntaxHighlighting != null)
-        {
-            CodePreviewHeader.Text = $"\U0001f4c4 {fileName} ({encoding})";
-            CodeEditor.Text = result.TextContent;
-            CodeEditor.SyntaxHighlighting = syntaxHighlighting;
-            CodeEditorPanel.Visibility = Visibility.Visible;
-            return;
-        }
-
-        TextPreviewHeader.Text = $"\U0001f4c4 {fileName} ({encoding})";
-        TextPreviewContent.Text = result.TextContent;
-        TextPreviewScroll.Visibility = Visibility.Visible;
-    }
-
-    private async Task InitializeAndShowMarkdown(string markdownHtml)
-    {
-        try
-        {
-            await Dispatcher.InvokeAsync(async () =>
-            {
-                try
-                {
-                    await MarkdownWebView.EnsureCoreWebView2Async();
-
-                    var htmlContent = $@"
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset='utf-8'>
-    <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; padding: 16px; line-height: 1.6; }}
-        code {{ background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco, monospace; }}
-        pre {{ background: #f4f4f4; padding: 12px; border-radius: 6px; overflow-x: auto; }}
-        pre code {{ background: none; padding: 0; }}
-        table {{ border-collapse: collapse; width: 100%; }}
-        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-        th {{ background: #f4f4f4; }}
-    </style>
-</head>
-<body>
-{markdownHtml}
-</body>
-</html>";
-
-                    MarkdownWebView.NavigateToString(htmlContent);
-                    MarkdownWebView.Visibility = Visibility.Visible;
-                    TextPreviewScroll.Visibility = Visibility.Collapsed;
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"WebView2 init failed: {ex.Message}");
-                    MarkdownWebView.Visibility = Visibility.Collapsed;
-                }
-            });
-        }
-        catch
-        {
-        }
-    }
-
-    private IHighlightingDefinition? GetSyntaxHighlighting(string extension)
-    {
-        var manager = HighlightingManager.Instance;
-
-        return extension.ToLowerInvariant() switch
-        {
-            ".cs" => manager.GetDefinition("C#"),
-            ".cpp" or ".c" or ".h" or ".hpp" => manager.GetDefinition("C++"),
-            ".java" => manager.GetDefinition("Java"),
-            ".js" or ".jsx" => manager.GetDefinition("JavaScript"),
-            ".ts" or ".tsx" => manager.GetDefinition("TypeScript"),
-            ".py" => manager.GetDefinition("Python"),
-            ".rb" => manager.GetDefinition("Ruby"),
-            ".php" => manager.GetDefinition("PHP"),
-            ".xml" or ".xaml" or ".config" => manager.GetDefinition("XML"),
-            ".html" or ".htm" => manager.GetDefinition("HTML"),
-            ".css" or ".scss" or ".sass" => manager.GetDefinition("CSS"),
-            ".json" => manager.GetDefinition("JavaScript"),
-            ".sql" => manager.GetDefinition("SQL"),
-            ".sh" or ".bash" => manager.GetDefinition("Bash"),
-            ".ps1" => manager.GetDefinition("PowerShell"),
-            _ => null
-        };
-    }
-
-    private void ShowUnsupportedPreview()
-    {
-        UnsupportedText.Visibility = Visibility.Visible;
-    }
-
-    private void HideAllPanels()
-    {
-        ImagePreview.Visibility = Visibility.Collapsed;
-        ArchivePanel.Visibility = Visibility.Collapsed;
-        VideoPlayer.Visibility = Visibility.Collapsed;
-        TextPreviewScroll.Visibility = Visibility.Collapsed;
-        MarkdownWebView.Visibility = Visibility.Collapsed;
-        CodeEditorPanel.Visibility = Visibility.Collapsed;
-        UnsupportedText.Visibility = Visibility.Collapsed;
-        BackButton.Visibility = Visibility.Collapsed;
-
-        _folderHistory.Clear();
-        _currentFolderPath = null;
-        _isPreviewingFileInFolder = false;
-
-        ImagePreview.Source = null;
-        WpfAnimatedGif.ImageBehavior.SetAnimatedSource(ImagePreview, null);
-
-        InnerImagePreview.Source = null;
-        WpfAnimatedGif.ImageBehavior.SetAnimatedSource(InnerImagePreview, null);
-
-        FileListView.ItemsSource = null;
-
-        TextPreviewContent.Text = string.Empty;
-        TextPreviewHeader.Text = string.Empty;
-        CodeEditor.Text = string.Empty;
-        CodePreviewHeader.Text = string.Empty;
-
-        StopVideoPlayback();
-    }
-
-    private void OnExpandClick(object sender, RoutedEventArgs e)
-    {
-        var contentGrid = (Grid)ArchivePanel.FindName("ContentGrid");
-        if (contentGrid == null) return;
-
-        if (contentGrid.Visibility == Visibility.Visible)
-        {
-            contentGrid.Visibility = Visibility.Collapsed;
-            ExpandButton.Content = Strings.ExpandFileList;
-            InnerImagePreview.Visibility = Visibility.Collapsed;
-        }
-        else
-        {
-            var displayItems = _currentEntries?
-                .Select(entry => new ArchiveDisplayItem(entry))
-                .ToList();
-
-            FileListView.ItemsSource = displayItems;
-            contentGrid.Visibility = Visibility.Visible;
-            ExpandButton.Content = Strings.CollapseFileList;
-        }
-    }
-
-    private void OnFileListDoubleClick(object sender, MouseButtonEventArgs e)
-    {
-        if (_currentListKind != PreviewKind.Folder)
-            return;
-
-        var pos = e.GetPosition(FileListView);
-        var element = FileListView.InputHitTest(pos) as DependencyObject;
-
-        while (element != null && element is not System.Windows.Controls.ListViewItem)
-        {
-            element = VisualTreeHelper.GetParent(element);
-        }
-
-        if (element is not System.Windows.Controls.ListViewItem lvItem ||
-            lvItem.Content is not ArchiveDisplayItem displayItem ||
-            _currentFolderPath == null)
-            return;
-
-        if (displayItem.Entry.IsDirectory)
-        {
-            if (_onFolderNavigate == null) return;
-            _folderHistory.Push(_currentFolderPath);
-            NavigateToFolder(displayItem.Entry.FullPath);
-        }
-        else
-        {
-            if (_onFilePreviewRequested == null) return;
-            _folderHistory.Push(_currentFolderPath);
-            _isPreviewingFileInFolder = true;
-
-            _onFilePreviewRequested(displayItem.Entry.FullPath, result =>
-            {
-                Dispatcher.Invoke(() =>
-                {
-                    ShowFilePreviewFromFolder(result, displayItem.Entry.FullPath);
-                });
-            });
-        }
-    }
-
-    private void OnBackClick(object sender, RoutedEventArgs e)
-    {
-        if (_folderHistory.Count == 0)
-            return;
-
-        if (_isPreviewingFileInFolder)
-        {
-            _isPreviewingFileInFolder = false;
-            var parentFolder = _folderHistory.Pop();
-
-            HideNonFolderPanels();
-            StopVideoPlayback();
-
-            _currentListKind = PreviewKind.Folder;
-            ArchivePanel.Visibility = Visibility.Visible;
-
-            NavigateToFolder(parentFolder);
-            return;
-        }
-
-        if (_onFolderNavigate == null) return;
-        var previousPath = _folderHistory.Pop();
-        NavigateToFolder(previousPath);
-    }
-
-    private void ShowFilePreviewFromFolder(PreviewResult result, string filePath)
-    {
-        HideNonFolderPanels();
-        ArchivePanel.Visibility = Visibility.Collapsed;
-
-        switch (result.Kind)
-        {
-            case PreviewKind.Image:
-                ShowImagePreview(result);
-                break;
-            case PreviewKind.Video:
-                ShowVideoPreview(result);
-                break;
-            case PreviewKind.Text:
-                ShowTextPreview(result, filePath);
-                break;
-            case PreviewKind.Archive:
-                ShowArchivePreview(result, filePath);
-                break;
-            default:
-                ShowUnsupportedPreview();
-                break;
-        }
-
-        BackButton.Visibility = Visibility.Visible;
-    }
-
-    private void HideNonFolderPanels()
-    {
-        ImagePreview.Visibility = Visibility.Collapsed;
-        ImagePreview.Source = null;
-        WpfAnimatedGif.ImageBehavior.SetAnimatedSource(ImagePreview, null);
-
-        VideoPlayer.Visibility = Visibility.Collapsed;
-        TextPreviewScroll.Visibility = Visibility.Collapsed;
-        MarkdownWebView.Visibility = Visibility.Collapsed;
-        CodeEditorPanel.Visibility = Visibility.Collapsed;
-        UnsupportedText.Visibility = Visibility.Collapsed;
-
-        InnerImagePreview.Source = null;
-        WpfAnimatedGif.ImageBehavior.SetAnimatedSource(InnerImagePreview, null);
-        InnerImagePreview.Visibility = Visibility.Collapsed;
-
-        TextPreviewContent.Text = string.Empty;
-        TextPreviewHeader.Text = string.Empty;
-        CodeEditor.Text = string.Empty;
-        CodePreviewHeader.Text = string.Empty;
-    }
-
-    private void NavigateToFolder(string path)
-    {
-        _onFolderNavigate?.Invoke(path, result =>
-        {
-            Dispatcher.Invoke(() =>
-            {
-                _currentFolderPath = path;
-                _currentArchivePath = path;
-                _currentEntries = result.Entries;
-
-                ArchiveTitle.Text = $"\U0001f4c1 {System.IO.Path.GetFileName(path)} ({Strings.Format("FolderItemCount", result.Entries?.Count ?? 0)})";
-
-                var displayItems = _currentEntries?
-                    .Select(entry => new ArchiveDisplayItem(entry))
-                    .ToList();
-                FileListView.ItemsSource = displayItems;
-
-                BackButton.Visibility = _folderHistory.Count > 0
-                    ? Visibility.Visible
-                    : Visibility.Collapsed;
-
-                InnerImagePreview.Visibility = Visibility.Collapsed;
-            });
-        });
-    }
-
-    private void OnFileListMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        if (FileListView.ItemsSource == null) return;
-
-        var pos = e.GetPosition(FileListView);
-        var element = FileListView.InputHitTest(pos) as DependencyObject;
-
-        while (element != null && element is not System.Windows.Controls.ListViewItem)
-        {
-            element = VisualTreeHelper.GetParent(element);
-        }
-
-        if (element is System.Windows.Controls.ListViewItem item && item.Content is ArchiveDisplayItem displayItem)
-        {
-            if (displayItem.Entry.IsImage && !string.IsNullOrEmpty(_currentArchivePath))
-            {
-                if (_currentListKind == PreviewKind.Folder)
-                {
-                    _onImageInArchiveHover?.Invoke("__folder__", displayItem.Entry.FullPath);
-                }
-                else
-                {
-                    _onImageInArchiveHover?.Invoke(_currentArchivePath, displayItem.Entry.FullPath);
-                }
-            }
-        }
-    }
-
-    public void ShowInnerImagePreview(PreviewResult imageResult)
-    {
-        if (imageResult.Kind != PreviewKind.Image || imageResult.ImageData == null)
-        {
-            InnerImagePreview.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        using var ms = new MemoryStream(imageResult.ImageData);
-        var bitmap = new BitmapImage();
-        bitmap.BeginInit();
-        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-        bitmap.StreamSource = ms;
-        bitmap.EndInit();
-        bitmap.Freeze();
-
-        if (imageResult.ImageFormat == "Gif")
-        {
-            WpfAnimatedGif.ImageBehavior.SetAnimatedSource(InnerImagePreview, bitmap);
-        }
-        else
-        {
-            WpfAnimatedGif.ImageBehavior.SetAnimatedSource(InnerImagePreview, null);
-            InnerImagePreview.Source = bitmap;
-        }
-
-        InnerImagePreview.Visibility = Visibility.Visible;
-    }
-
-    private void PositionWindow(int mouseX, int mouseY)
-    {
-        var screenWidth = SystemParameters.PrimaryScreenWidth;
-        var screenHeight = SystemParameters.PrimaryScreenHeight;
-
-        var fixedWidth = _windowWidth;
-        var fixedHeight = _windowHeight;
-
-        double left = (screenWidth - fixedWidth) / 2;
-        double top = (screenHeight - fixedHeight) / 2;
-
-        if (left < 10) left = 10;
-        if (top < 10) top = 10;
-        if (left + fixedWidth > screenWidth - 10)
-            left = screenWidth - fixedWidth - 10;
-        if (top + fixedHeight > screenHeight - 10)
-            top = screenHeight - fixedHeight - 10;
-
-        Width = fixedWidth;
-        Height = fixedHeight;
-        Left = left;
-        Top = top;
-    }
-
-    private void FadeIn()
-    {
-        var storyboard = (Storyboard)Resources["FadeIn"];
-        storyboard.Begin(this);
-        Show();
-    }
-
-    private void FadeOut()
-    {
-        var storyboard = (Storyboard)Resources["FadeOut"];
-        storyboard.Completed += (s, e) => Hide();
-        storyboard.Begin(this);
-    }
-
-    private void OnMouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        _isMouseInside = false;
-        PreviewMouseLeft?.Invoke();
-    }
-
-    private void EnsureLibVLCInitialized()
-    {
-        if (_libVLC != null) return;
-
-        try
-        {
-            LibVLCSharp.Shared.Core.Initialize();
-            _libVLC = new LibVLC("--no-audio", "--no-video-title-show");
-            _mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(_libVLC)
-            {
-                EnableHardwareDecoding = true
-            };
-
-            _mediaPlayer.EncounteredError += (sender, args) =>
-            {
-                Dispatcher.InvokeAsync(() =>
-                {
-                    StopVideoPlayback();
-                    VideoPlayer.Visibility = Visibility.Collapsed;
-                    UnsupportedText.Text = Strings.VideoCannotPlay;
-                    UnsupportedText.Visibility = Visibility.Visible;
-                });
-            };
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"LibVLC init failed: {ex.Message}");
-        }
-    }
-
-    private void ShowVideoPreview(PreviewResult result)
-    {
-        if (string.IsNullOrEmpty(result.VideoFilePath)) return;
-
-        try
-        {
-            EnsureLibVLCInitialized();
-
-            if (_mediaPlayer == null || _libVLC == null) return;
-
-            VideoPlayer.MediaPlayer = _mediaPlayer;
-            VideoPlayer.Visibility = Visibility.Visible;
-
-            using var media = new Media(_libVLC, result.VideoFilePath, FromType.FromPath);
-            media.AddOption(":no-audio");
-            _mediaPlayer.Play(media);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Video playback failed: {ex.Message}");
-            VideoPlayer.Visibility = Visibility.Collapsed;
-            UnsupportedText.Text = Strings.VideoCannotPlay;
-            UnsupportedText.Visibility = Visibility.Visible;
-        }
-    }
-
-    private void StopVideoPlayback()
-    {
-        if (_mediaPlayer is { IsPlaying: true })
-        {
-            try
-            {
-                _mediaPlayer.Stop();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Stop video failed: {ex.Message}");
-            }
-        }
+        var exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+        SetWindowLong(hwnd, GWL_EXSTYLE, exStyle | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW);
     }
 
     protected override void OnClosed(EventArgs e)
     {
-        StopVideoPlayback();
-        _mediaPlayer?.Dispose();
-        _libVLC?.Dispose();
+        ThemeManager.ThemeChanged -= OnThemeChanged;
+        DisposeVideo();
         base.OnClosed(e);
     }
 
-    [DllImport("user32.dll", SetLastError = true)]
+    private const int GWL_EXSTYLE = -20;
+    private const int WS_EX_NOACTIVATE = 0x08000000;
+    private const int WS_EX_TOOLWINDOW = 0x00000080;
+    private static readonly IntPtr HWND_TOPMOST = new(-1);
+    private const uint SWP_NOSIZE = 0x0001;
+    private const uint SWP_NOACTIVATE = 0x0010;
+
+    [DllImport("user32.dll")]
     private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [DllImport("user32.dll")]
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-}
 
-public sealed class ArchiveDisplayItem
-{
-    public ArchiveEntry Entry { get; }
-
-    public ArchiveDisplayItem(ArchiveEntry entry)
-    {
-        Entry = entry;
-    }
-
-    public string Name => Entry.Name;
-    public string SizeText => Entry.IsDirectory ? "" : FormatFileSize(Entry.Size);
-    public string TypeIcon => Entry.IsDirectory ? "\U0001f4c1" : Entry.IsImage ? "\U0001f5bc\ufe0f" : "\U0001f4c4";
-
-    private static string FormatFileSize(long bytes)
-    {
-        string[] sizes = { "B", "KB", "MB", "GB" };
-        double len = bytes;
-        int order = 0;
-        while (len >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            len = len / 1024;
-        }
-        return $"{len:0.##} {sizes[order]}";
-    }
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint flags);
 }

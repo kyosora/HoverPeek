@@ -1,31 +1,50 @@
+using System.IO;
 using System.Windows;
+using System.Windows.Threading;
+using HoverPeek.Core.Diagnostics;
 using HoverPeek.Core.FileResolver;
+using HoverPeek.Core.Imaging;
 using HoverPeek.Core.Localization;
 using HoverPeek.Core.MouseHook;
 using HoverPeek.Core.Preview;
 using HoverPeek.Core.Settings;
 using HoverPeek.UI;
-using System.Drawing;
-using WinForms = System.Windows.Forms;
+using Icon = System.Drawing.Icon;
 using MessageBox = System.Windows.MessageBox;
 
 namespace HoverPeek.App;
 
-public partial class App : System.Windows.Application
+/// <summary>
+/// 協調層：滑鼠事件 → 預覽管線 → 預覽視窗。
+///
+/// 時序：
+///   停穩 60ms   → 開新 session，背景開始找檔案、解碼
+///   懸停時間到  → 已算好就直接顯示；否則先顯示系統縮圖或「載入中」，完成後替換
+///   滑鼠移開    → 延遲後重新確認游標下的檔案，仍是同一個就不關（在檔案上微動不會閃掉）
+/// </summary>
+public partial class App : System.Windows.Application, IPreviewHost
 {
+    private static readonly TimeSpan FullResultGrace = TimeSpan.FromMilliseconds(25);
+    private static readonly TimeSpan QuickResultGrace = TimeSpan.FromMilliseconds(60);
+    private static readonly TimeSpan InsideWindowRecheck = TimeSpan.FromMilliseconds(250);
+    private static readonly TimeSpan ErrorDialogCooldown = TimeSpan.FromSeconds(30);
+
+    private SettingsService _settingsService = null!;
     private GlobalMouseHook? _mouseHook;
     private HoverDetector? _hoverDetector;
-    private ExplorerFileResolver? _fileResolver;
-    private PreviewWindow? _previewWindow;
-    private ImagePreviewProvider? _imageProvider;
-    private SvgPreviewProvider? _svgProvider;
-    private ArchivePreviewProvider? _archiveProvider;
-    private VideoPreviewProvider? _videoProvider;
-    private TextPreviewProvider? _textProvider;
-    private FolderPreviewProvider? _folderProvider;
-    private SettingsService? _settingsService;
-    private bool _previewLocked = false;
-    private WinForms.NotifyIcon? _notifyIcon;
+    private ShellThumbnailProvider? _shell;
+    private ArchivePreviewProvider _archiveProvider = null!;
+    private PreviewPipeline _pipeline = null!;
+    private PreviewWindow _previewWindow = null!;
+    private TrayIconController? _tray;
+    private SettingsWindow? _settingsWindow;
+
+    // 收合判斷用的獨立 resolver：管線的 resolver 同時在背景跑，避免互相覆蓋快取
+    private readonly ExplorerFileResolver _closeResolver = new();
+
+    private PreviewSession? _session;
+    private CancellationTokenSource? _closeCts;
+    private DateTime _lastErrorDialog = DateTime.MinValue;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -35,76 +54,44 @@ public partial class App : System.Windows.Application
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
-        // 載入設定並初始化語言
         _settingsService = new SettingsService();
         var settings = _settingsService.Current;
         LocaleManager.SetLanguage(settings.Language);
 
-        // 建立系統托盤圖示
-        _notifyIcon = new WinForms.NotifyIcon
+        _shell = new ShellThumbnailProvider();
+        var imageProvider = new ImagePreviewProvider(_shell);
+        _archiveProvider = new ArchivePreviewProvider(imageProvider);
+
+        // 順序即優先序：第一個 CanHandle 的負責
+        var providers = new IPreviewProvider[]
         {
-            Icon = LoadAppIcon(),
-            Visible = true,
-            Text = Strings.TrayTooltip
+            _archiveProvider,
+            new SvgPreviewProvider(),
+            imageProvider,
+            new VideoPreviewProvider(),
+            new TextPreviewProvider(),
+            new FolderPreviewProvider(),
+        };
+        _pipeline = new PreviewPipeline(new ExplorerFileResolver(), _shell, new PreviewCache(), providers)
+        {
+            Options = PreviewOptions.From(settings),
         };
 
-        var contextMenu = new WinForms.ContextMenuStrip();
+        _previewWindow = new PreviewWindow(this);
+        _previewWindow.ApplySettings(settings);
 
-        var settingsItem = new WinForms.ToolStripMenuItem(Strings.TraySettings);
-        settingsItem.Click += (s, args) => OpenSettingsWindow();
-        contextMenu.Items.Add(settingsItem);
-
-        contextMenu.Items.Add(new WinForms.ToolStripSeparator());
-
-        var exitItem = new WinForms.ToolStripMenuItem(Strings.TrayExitApp);
-        exitItem.Click += (s, args) =>
-        {
-            _notifyIcon.Visible = false;
-            Shutdown();
-        };
-        contextMenu.Items.Add(exitItem);
-        _notifyIcon.ContextMenuStrip = contextMenu;
-
-        _notifyIcon.DoubleClick += (s, args) =>
-        {
-            MessageBox.Show(
-                Strings.TrayRunningMessage,
-                Strings.TrayRunningTitle,
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-        };
-
-        // 使用設定初始化 Providers
-        _imageProvider = new ImagePreviewProvider(settings.ImageMaxDimension);
-        _svgProvider = new SvgPreviewProvider(settings.ImageMaxDimension);
-        _archiveProvider = new ArchivePreviewProvider(_imageProvider);
-        _videoProvider = new VideoPreviewProvider();
-        _folderProvider = new FolderPreviewProvider();
-        _textProvider = new TextPreviewProvider(
-            settings.TextMaxFileSizeMB * 1024 * 1024,
-            settings.TextMaxLines);
-        _fileResolver = new ExplorerFileResolver();
+        _tray = new TrayIconController(LoadAppIcon());
+        _tray.SettingsRequested += OpenSettingsWindow;
+        _tray.PauseToggled += OnPauseToggled;
+        _tray.ExitRequested += Shutdown;
 
         _mouseHook = new GlobalMouseHook();
-        _hoverDetector = new HoverDetector(_mouseHook,
-            hoverThresholdMs: settings.HoverDelayMs,
-            jitterTolerancePx: settings.JitterTolerancePx);
+        _hoverDetector = new HoverDetector(_mouseHook, settings.HoverDelayMs, settings.JitterTolerancePx);
+        _hoverDetector.Settled += (x, y) => Dispatcher.BeginInvoke(() => OnSettled(x, y));
+        _hoverDetector.HoverStarted += (x, y) => Dispatcher.BeginInvoke(() => _ = OnHoverStartedAsync(x, y));
+        _hoverDetector.HoverEnded += () => Dispatcher.BeginInvoke(ScheduleClose);
 
-        _hoverDetector.HoverStarted += OnHoverStarted;
-        _hoverDetector.HoverEnded += OnHoverEnded;
-
-        _previewWindow = new PreviewWindow(OnImageInArchiveHover, OnFolderNavigateRequested, OnFilePreviewRequested);
-        _previewWindow.UpdateSettings(
-            settings.WindowWidth, settings.WindowHeight,
-            settings.CenterWindow,
-            settings.FadeInDurationMs, settings.FadeOutDurationMs);
-
-        _previewWindow.PreviewMouseLeft += OnPreviewMouseLeft;
-        _previewWindow.Show();
-        _previewWindow.Hide();
-
-        // 訂閱設定變更事件
-        _settingsService.SettingsChanged += OnSettingsChanged;
+        _settingsService.SettingsChanged += s => Dispatcher.BeginInvoke(() => ApplySettings(s));
 
         try
         {
@@ -112,268 +99,239 @@ public partial class App : System.Windows.Application
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
-                Strings.Format("MouseHookFailed", ex.Message),
-                Strings.StartupFailedTitle,
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-            _notifyIcon.Visible = false;
+            AppLog.Error("滑鼠 hook 安裝失敗", ex);
+            MessageBox.Show(Strings.Format("MouseHookFailed", ex.Message), Strings.StartupFailedTitle,
+                MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown();
+            return;
         }
+
+        // 閒下來再暖機 VLC，不拖慢啟動
+        Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () => _ = PreviewWindow.WarmUpVideoAsync());
+        AppLog.Info($"HoverPeek 啟動，設定檔：{_settingsService.SettingsFilePath}");
     }
 
-    private void OnSettingsChanged(AppSettings settings)
+    private bool IsPaused => _tray?.IsPaused == true;
+
+    private void OnSettled(int x, int y)
     {
-        Dispatcher.Invoke(() =>
-        {
-            _hoverDetector?.UpdateSettings(settings.HoverDelayMs, settings.JitterTolerancePx);
-            _imageProvider?.UpdateSettings(settings.ImageMaxDimension);
-            _svgProvider?.UpdateSettings(settings.ImageMaxDimension);
-            _textProvider?.UpdateSettings(
-                settings.TextMaxFileSizeMB * 1024 * 1024,
-                settings.TextMaxLines);
-            _previewWindow?.UpdateSettings(
-                settings.WindowWidth, settings.WindowHeight,
-                settings.CenterWindow,
-                settings.FadeInDurationMs, settings.FadeOutDurationMs);
-        });
+        if (IsPaused || _previewWindow.ContainsCursor())
+            return;
+
+        _session?.Cancel();
+        _session = _pipeline.Start(x, y);
     }
 
-    private async void OnHoverStarted(int x, int y)
+    private async Task OnHoverStartedAsync(int x, int y)
     {
-        await Dispatcher.InvokeAsync(async () =>
+        if (IsPaused || _previewWindow.ContainsCursor())
+            return;
+
+        var session = _session;
+        if (session == null || session.IsCanceled || session.X != x || session.Y != y)
         {
-            if (_previewLocked)
-            {
+            session?.Cancel();
+            session = _session = _pipeline.Start(x, y);
+        }
+
+        var path = await session.TryGetPathAsync();
+        if (!ReferenceEquals(session, _session) || path == null)
+            return;
+
+        CancelScheduledClose();
+        if (_previewWindow.IsShowingComplete(path))
+            return;
+
+        var anchor = new PreviewAnchor(x, y, session.DpiScale);
+        var full = session.FullTask;
+
+        // 多數情況在停穩後的等待期間已經算好
+        await Task.WhenAny(full, Task.Delay(FullResultGrace));
+        if (!ReferenceEquals(session, _session))
+            return;
+
+        if (!full.IsCompleted)
+        {
+            await Task.WhenAny(full, session.QuickTask, Task.Delay(QuickResultGrace));
+            if (!ReferenceEquals(session, _session))
                 return;
-            }
 
-            _previewWindow?.Hide();
-
-            var resolver = _fileResolver;
-            var filePath = resolver != null
-                ? await Task.Run(() => resolver.ResolveFileAtPoint(x, y))
-                : null;
-            if (filePath == null)
+            if (!full.IsCompleted)
             {
-                return;
+                var quick = session.QuickTask is { IsCompletedSuccessfully: true, Result: { } q } ? q : null;
+                if (quick != null)
+                    _previewWindow.ShowResult(quick, anchor);
+                else
+                    _previewWindow.ShowLoading(path, anchor);
             }
+        }
 
-            IPreviewProvider? provider = _archiveProvider?.CanHandle(filePath) == true
-                ? _archiveProvider
-                : _svgProvider?.CanHandle(filePath) == true
-                    ? _svgProvider
-                    : _imageProvider?.CanHandle(filePath) == true
-                        ? _imageProvider
-                        : _videoProvider?.CanHandle(filePath) == true
-                            ? _videoProvider
-                            : _textProvider?.CanHandle(filePath) == true
-                                ? _textProvider
-                                : _folderProvider?.CanHandle(filePath) == true
-                                    ? _folderProvider
-                                    : null;
+        PreviewResult? result;
+        try
+        {
+            result = await full;
+        }
+        catch (OperationCanceledException)
+        {
+            return; // 新的 session 接手
+        }
 
-            if (provider == null)
+        if (!ReferenceEquals(session, _session))
+            return;
+
+        if (result == null)
+            _previewWindow.HidePreview(); // 不是可預覽的檔案（例如滑到捷徑上）
+        else
+            _previewWindow.ShowResult(result, anchor);
+    }
+
+    private void ScheduleClose()
+    {
+        if (!_previewWindow.IsVisible)
+            return;
+
+        _closeCts?.Cancel();
+        _closeCts = new CancellationTokenSource();
+        _ = CloseWhenLeftAsync(_closeCts.Token);
+    }
+
+    private void CancelScheduledClose()
+    {
+        _closeCts?.Cancel();
+        _closeCts = null;
+    }
+
+    private async Task CloseWhenLeftAsync(CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(_settingsService.Current.AutoCloseDelayMs, ct);
+
+            while (true)
             {
-                return;
-            }
-
-            try
-            {
-                var preview = await provider.GeneratePreviewAsync(filePath);
-                _previewWindow?.ShowPreview(preview, filePath, x, y);
-                _previewLocked = true;
-            }
-            catch (Exception ex)
-            {
-                var errorMsg = Strings.Format("PreviewErrorMessage", filePath);
-
-                var currentEx = ex;
-                var depth = 0;
-                while (currentEx != null && depth < 5)
+                // 游標在預覽視窗裡：使用者在捲動或點清單，持續等到離開
+                if (_previewWindow.ContainsCursor())
                 {
-                    errorMsg += $"\n{Strings.Format("ErrorLabel", depth + 1)} {currentEx.GetType().Name}\n{currentEx.Message}\n";
-                    currentEx = currentEx.InnerException;
-                    depth++;
+                    await Task.Delay(InsideWindowRecheck, ct);
+                    continue;
                 }
 
-                errorMsg += Strings.Format("FullStackTrace", ex);
+                var (x, y) = Core.Interop.DisplayInfo.GetCursorPosition();
+                var under = await Task.Run(() => _closeResolver.ResolveFileAtPoint(x, y), ct);
+                if (string.Equals(under, _previewWindow.ShownPath, StringComparison.OrdinalIgnoreCase))
+                    return; // 還在同一個檔案上
 
-                MessageBox.Show(errorMsg, Strings.PreviewErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
-                _previewWindow?.Hide();
+                // 滑到另一個可預覽的檔案：先不關，等懸停直接換內容，避免「消失→出現」的閃爍
+                if (under != null && _pipeline.SelectProvider(under) != null)
+                {
+                    await Task.Delay(InsideWindowRecheck, ct);
+                    continue;
+                }
+
+                ct.ThrowIfCancellationRequested();
+                _previewWindow.HidePreview();
+                return;
             }
-        });
-    }
-
-    private void OnHoverEnded()
-    {
-        TryDelayedClose();
-    }
-
-    private void OnPreviewMouseLeft()
-    {
-        TryDelayedClose();
-    }
-
-    private void TryDelayedClose()
-    {
-        Dispatcher.InvokeAsync(async () =>
+        }
+        catch (OperationCanceledException)
         {
-            var delay = _settingsService?.Current.AutoCloseDelayMs ?? 600;
-            await Task.Delay(delay);
-            if (_previewWindow != null && !_previewWindow.IsMouseInside && _previewLocked)
-            {
-                _previewWindow.Hide();
-                _previewLocked = false;
-            }
-        });
+            // 新的預覽出現或游標回到檔案上
+        }
     }
 
-    private async void OnFilePreviewRequested(string filePath, Action<PreviewResult> callback)
+    private void OnPauseToggled(bool paused)
     {
-        IPreviewProvider? provider = _archiveProvider?.CanHandle(filePath) == true
-            ? _archiveProvider
-            : _svgProvider?.CanHandle(filePath) == true
-                ? _svgProvider
-                : _imageProvider?.CanHandle(filePath) == true
-                    ? _imageProvider
-                    : _videoProvider?.CanHandle(filePath) == true
-                        ? _videoProvider
-                        : _textProvider?.CanHandle(filePath) == true
-                            ? _textProvider
-                            : null;
-
-        if (provider == null)
-        {
-            callback(new PreviewResult { Kind = PreviewKind.Unsupported });
+        if (!paused)
             return;
-        }
-
-        try
-        {
-            var result = await provider.GeneratePreviewAsync(filePath);
-            callback(result);
-        }
-        catch
-        {
-            callback(new PreviewResult { Kind = PreviewKind.Unsupported });
-        }
+        _session?.Cancel();
+        _session = null;
+        CancelScheduledClose();
+        _previewWindow.HidePreview();
     }
 
-    private async void OnFolderNavigateRequested(string path, Action<PreviewResult> callback)
+    private void ApplySettings(AppSettings settings)
     {
-        if (_folderProvider == null) return;
-
-        try
-        {
-            var result = await _folderProvider.GeneratePreviewAsync(path);
-            callback(result);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Folder navigate failed: {ex.Message}");
-        }
+        _hoverDetector?.UpdateSettings(settings.HoverDelayMs, settings.JitterTolerancePx);
+        _pipeline.Options = PreviewOptions.From(settings);
+        _previewWindow.ApplySettings(settings);
     }
 
-    private async void OnImageInArchiveHover(string archivePath, string entryPath)
+    // ---- IPreviewHost：預覽視窗內的資料夾瀏覽、壓縮檔內圖片 ----
+
+    Task<PreviewResult> IPreviewHost.PreviewPathAsync(string path, double dpiScale) =>
+        _pipeline.PreviewPathAsync(path, dpiScale);
+
+    Task<PreviewResult> IPreviewHost.PreviewArchiveEntryAsync(string archivePath, string entryPath, double dpiScale)
     {
-        if (_previewWindow == null)
-            return;
-
-        try
-        {
-            PreviewResult imagePreview;
-
-            if (archivePath == "__folder__")
-            {
-                if (_imageProvider == null) return;
-                imagePreview = await _imageProvider.GeneratePreviewAsync(entryPath);
-            }
-            else
-            {
-                if (_archiveProvider == null) return;
-                imagePreview = await Task.Run(
-                    () => _archiveProvider.PreviewImageInArchive(archivePath, entryPath));
-            }
-
-            _previewWindow.ShowInnerImagePreview(imagePreview);
-        }
-        catch
-        {
-        }
+        var template = _pipeline.BuildRequest(archivePath, dpiScale);
+        return Task.Run(() => _archiveProvider.PreviewImageInArchive(archivePath, entryPath, template));
     }
+
+    // ---- 視窗與生命週期 ----
 
     private void OpenSettingsWindow()
     {
-        if (_settingsService == null)
-            return;
-
-        Dispatcher.Invoke(() =>
+        if (_settingsWindow != null)
         {
-            var settingsWindow = new SettingsWindow(_settingsService)
-            {
-                Owner = null,
-                WindowStartupLocation = WindowStartupLocation.CenterScreen
-            };
+            _settingsWindow.Activate();
+            return;
+        }
 
-            settingsWindow.ShowDialog();
-        });
+        _settingsWindow = new SettingsWindow(_settingsService);
+        _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+        _settingsWindow.Show();
+        _settingsWindow.Activate();
     }
 
     private static Icon LoadAppIcon()
     {
-        // 優先從嵌入資源讀取，避免 ClickOnce 等發布方式下路徑對不上
         try
         {
-            var resourceUri = new Uri("pack://application:,,,/HoverPeek;component/HoverPeek.ico", UriKind.Absolute);
-            var streamInfo = System.Windows.Application.GetResourceStream(resourceUri);
-            if (streamInfo != null)
-                return new Icon(streamInfo.Stream);
+            var uri = new Uri("pack://application:,,,/HoverPeek;component/HoverPeek.ico", UriKind.Absolute);
+            if (GetResourceStream(uri) is { } info)
+                return new Icon(info.Stream);
         }
-        catch
+        catch (Exception ex) when (ex is IOException or ArgumentException)
         {
-            // fallback 到檔案路徑
+            AppLog.Warn("讀取內嵌圖示失敗，改用檔案", ex);
         }
 
-        var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "HoverPeek.ico");
-        if (System.IO.File.Exists(iconPath))
-            return new Icon(iconPath);
-
-        return SystemIcons.Application;
+        var iconPath = Path.Combine(AppContext.BaseDirectory, "HoverPeek.ico");
+        return File.Exists(iconPath) ? new Icon(iconPath) : System.Drawing.SystemIcons.Application;
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
-        if (_settingsService != null)
-            _settingsService.SettingsChanged -= OnSettingsChanged;
-
-        if (_previewWindow != null)
-            _previewWindow.PreviewMouseLeft -= OnPreviewMouseLeft;
-
-        _notifyIcon?.Dispose();
+        _session?.Cancel();
         _hoverDetector?.Dispose();
         _mouseHook?.Dispose();
+        _tray?.Dispose();
+        _pipeline?.Dispose();
+        _shell?.Dispose();
+        AppLog.Info("HoverPeek 結束");
         base.OnExit(e);
     }
 
-    private void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+    // ---- 例外處理：一律寫日誌；UI 執行緒上的未預期錯誤才提示，而且 30 秒內只提示一次 ----
+
+    private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        var errorMessage = Strings.Format("UnhandledExceptionMessage", e.Exception.GetType().Name, e.Exception.Message, e.Exception.StackTrace);
-        MessageBox.Show(errorMessage, Strings.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+        AppLog.Error("UI 執行緒未處理的例外", e.Exception);
         e.Handled = true;
+
+        if (DateTime.UtcNow - _lastErrorDialog < ErrorDialogCooldown)
+            return;
+        _lastErrorDialog = DateTime.UtcNow;
+        MessageBox.Show(Strings.Format("UnexpectedErrorLogged", AppLog.LogFile), Strings.ErrorTitle,
+            MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
-    private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
-    {
-        var exception = e.ExceptionObject as Exception;
-        var errorMessage = Strings.Format("FatalErrorMessage", exception?.GetType().Name, exception?.Message, exception?.StackTrace);
-        MessageBox.Show(errorMessage, Strings.FatalErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
-    }
+    private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e) =>
+        AppLog.Error($"未處理的例外（程式即將結束：{e.IsTerminating}）", e.ExceptionObject as Exception);
 
-    private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+    private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
-        var errorMessage = Strings.Format("TaskExceptionMessage", e.Exception.GetType().Name, e.Exception.Message, e.Exception.StackTrace);
-        MessageBox.Show(errorMessage, Strings.TaskErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+        AppLog.Warn("背景工作未觀察到的例外", e.Exception);
         e.SetObserved();
     }
 }

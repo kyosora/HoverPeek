@@ -19,4 +19,8 @@
     <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="HoverPeek.Core.Tests" />
+  </ItemGroup>
+
 </Project>

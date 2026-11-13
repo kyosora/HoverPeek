@@ -4,4 +4,7 @@
     <Project Path="src/HoverPeek.Core/HoverPeek.Core.csproj" />
     <Project Path="src/HoverPeek.UI/HoverPeek.UI.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/HoverPeek.Core.Tests/HoverPeek.Core.Tests.csproj" />
+  </Folder>
 </Solution>

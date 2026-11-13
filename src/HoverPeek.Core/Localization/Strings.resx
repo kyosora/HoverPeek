@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -265,39 +265,39 @@
 
   <!-- Settings - Hover behavior -->
   <data name="LabelHoverDelay" xml:space="preserve">
-    <value>懸停延遲（毫秒）</value>
+    <value>懸停延遲</value>
   </data>
   <data name="LabelJitterTolerance" xml:space="preserve">
-    <value>抖動容忍度（像素）</value>
+    <value>抖動容忍度</value>
   </data>
   <data name="LabelAutoCloseDelay" xml:space="preserve">
-    <value>自動關閉延遲（毫秒）</value>
+    <value>自動關閉延遲</value>
   </data>
   <data name="DescriptionLabel" xml:space="preserve">
     <value>說明：</value>
   </data>
   <data name="DescHoverDelay" xml:space="preserve">
-    <value>&#x2022; 懸停延遲：滑鼠停留多久後顯示預覽</value>
+    <value>滑鼠停在檔案上多久後顯示預覽</value>
   </data>
   <data name="DescJitterTolerance" xml:space="preserve">
-    <value>&#x2022; 抖動容忍度：滑鼠輕微移動不會中斷計時</value>
+    <value>在這個範圍內的輕微晃動不會重新計時</value>
   </data>
   <data name="DescAutoCloseDelay" xml:space="preserve">
-    <value>&#x2022; 自動關閉延遲：滑鼠離開檔案後多久關閉預覽</value>
+    <value>滑鼠離開檔案後多久關閉預覽；移到預覽視窗裡則不會關閉</value>
   </data>
 
   <!-- Settings - Preview window -->
   <data name="LabelWindowWidth" xml:space="preserve">
-    <value>視窗寬度（像素）</value>
+    <value>視窗最大寬度</value>
   </data>
   <data name="LabelWindowHeight" xml:space="preserve">
-    <value>視窗高度（像素）</value>
+    <value>視窗最大高度</value>
   </data>
   <data name="LabelCenterWindow" xml:space="preserve">
-    <value>固定在螢幕中央（否則跟隨滑鼠）</value>
+    <value>固定在螢幕中央</value>
   </data>
   <data name="LabelFadeInDuration" xml:space="preserve">
-    <value>淡入動畫時間（毫秒）</value>
+    <value>淡入動畫</value>
   </data>
   <data name="LabelFadeOutDuration" xml:space="preserve">
     <value>淡出動畫時間（毫秒）</value>
@@ -305,30 +305,30 @@
 
   <!-- Settings - Image preview -->
   <data name="LabelImageMaxDimension" xml:space="preserve">
-    <value>最大預覽尺寸（像素）</value>
+    <value>圖片最大尺寸</value>
   </data>
   <data name="LabelEnableGifAnimation" xml:space="preserve">
     <value>播放 GIF 動畫</value>
   </data>
   <data name="DescImageScale" xml:space="preserve">
-    <value>&#x2022; 大圖片會自動縮放到此尺寸以內</value>
+    <value>大圖片的長邊會縮到這個尺寸以內；高 DPI 螢幕會自動解出對應的像素，維持清晰</value>
   </data>
   <data name="DescGifStatic" xml:space="preserve">
-    <value>&#x2022; 取消勾選 GIF 動畫可顯示第一幀靜態圖</value>
+    <value>關閉時只顯示第一幀</value>
   </data>
 
   <!-- Settings - Text preview -->
   <data name="LabelTextMaxFileSize" xml:space="preserve">
-    <value>最大檔案大小（MB）</value>
+    <value>最大讀取大小</value>
   </data>
   <data name="LabelTextMaxLines" xml:space="preserve">
-    <value>最大顯示行數</value>
+    <value>最多顯示行數</value>
   </data>
   <data name="LabelTextFontSize" xml:space="preserve">
     <value>字型大小</value>
   </data>
   <data name="LabelTextFontFamily" xml:space="preserve">
-    <value>字型家族</value>
+    <value>字型</value>
   </data>
   <data name="LabelEnableMarkdownRendering" xml:space="preserve">
     <value>啟用 Markdown 渲染</value>
@@ -337,10 +337,10 @@
     <value>啟用語法高亮</value>
   </data>
   <data name="DescMarkdownRendering" xml:space="preserve">
-    <value>&#x2022; Markdown 渲染會將 .md 檔案顯示為格式化的網頁</value>
+    <value>.md 檔案以排版後的網頁顯示（不執行其中的腳本）</value>
   </data>
   <data name="DescSyntaxHighlighting" xml:space="preserve">
-    <value>&#x2022; 語法高亮會為程式碼檔案加上顏色標記</value>
+    <value>程式碼檔案加上語法顏色</value>
   </data>
 
   <!-- Settings - Video preview -->
@@ -351,10 +351,10 @@
     <value>靜音播放</value>
   </data>
   <data name="DescVideoThumbnail" xml:space="preserve">
-    <value>&#x2022; 取消自動播放可顯示影片縮圖</value>
+    <value>關閉時先顯示影片縮圖，點一下才播放</value>
   </data>
   <data name="DescVideoMuted" xml:space="preserve">
-    <value>&#x2022; 建議保持靜音以避免干擾</value>
+    <value>關閉時會播放聲音</value>
   </data>
 
   <!-- Settings - Archive preview -->
@@ -362,7 +362,7 @@
     <value>自動展開檔案列表</value>
   </data>
   <data name="DescArchiveAutoExpand" xml:space="preserve">
-    <value>&#x2022; 自動展開會在預覽時直接顯示壓縮檔內容</value>
+    <value>預覽壓縮檔時直接列出內容；關閉時需按「展開檔案列表」</value>
   </data>
   <data name="DescArchiveManual" xml:space="preserve">
     <value>&#x2022; 取消勾選可手動點擊「展開檔案列表」按鈕</value>
@@ -373,7 +373,7 @@
     <value>開機時自動啟動</value>
   </data>
   <data name="DescStartup" xml:space="preserve">
-    <value>&#x2022; 勾選後會在 Windows 啟動時自動執行 HoverPeek</value>
+    <value>登入 Windows 時自動在背景執行</value>
   </data>
   <data name="DescTrayMinimize" xml:space="preserve">
     <value>&#x2022; 程式會最小化到系統托盤運作</value>
@@ -445,5 +445,132 @@
   </data>
   <data name="AboutFrameworkLabel" xml:space="preserve">
     <value>運行環境</value>
+  </data>
+  <data name="PreviewLoading" xml:space="preserve">
+    <value>載入中…</value>
+  </data>
+  <data name="PreviewFailedTitle" xml:space="preserve">
+    <value>無法預覽</value>
+  </data>
+  <data name="PreviewShowDetails" xml:space="preserve">
+    <value>顯示詳細資訊</value>
+  </data>
+  <data name="PreviewCopyPath" xml:space="preserve">
+    <value>複製路徑</value>
+  </data>
+  <data name="BadgeTruncated" xml:space="preserve">
+    <value>已截斷</value>
+  </data>
+  <data name="BadgeLowRes" xml:space="preserve">
+    <value>縮圖</value>
+  </data>
+  <data name="MetaItems" xml:space="preserve">
+    <value>{0} 個項目</value>
+  </data>
+  <data name="HeaderModified" xml:space="preserve">
+    <value>修改日期</value>
+  </data>
+  <data name="ArchiveEncryptedOrBroken" xml:space="preserve">
+    <value>壓縮檔無法開啟（可能已加密或損毀）</value>
+  </data>
+  <data name="TrayPause" xml:space="preserve">
+    <value>暫停預覽</value>
+  </data>
+  <data name="TrayResume" xml:space="preserve">
+    <value>恢復預覽</value>
+  </data>
+  <data name="TrayOpenLog" xml:space="preserve">
+    <value>開啟日誌資料夾</value>
+  </data>
+  <data name="TrayPausedTooltip" xml:space="preserve">
+    <value>HoverPeek（已暫停）</value>
+  </data>
+  <data name="UnexpectedErrorLogged" xml:space="preserve">
+    <value>HoverPeek 發生未預期的錯誤，詳細內容已寫入日誌：
+{0}</value>
+  </data>
+  <data name="SectionImage" xml:space="preserve">
+    <value>圖片</value>
+  </data>
+  <data name="SectionText" xml:space="preserve">
+    <value>文字</value>
+  </data>
+  <data name="SectionVideo" xml:space="preserve">
+    <value>影片</value>
+  </data>
+  <data name="SectionArchive" xml:space="preserve">
+    <value>壓縮檔</value>
+  </data>
+  <data name="SectionGeneral" xml:space="preserve">
+    <value>一般</value>
+  </data>
+  <data name="DescWindowWidth" xml:space="preserve">
+    <value>圖片預覽會依圖片比例縮小視窗，不會超過這個寬度</value>
+  </data>
+  <data name="DescWindowHeight" xml:space="preserve">
+    <value>圖片預覽會依圖片比例縮小視窗，不會超過這個高度</value>
+  </data>
+  <data name="DescCenterWindow" xml:space="preserve">
+    <value>關閉時像 QTTabBar 一樣顯示在游標旁</value>
+  </data>
+  <data name="DescFadeInDuration" xml:space="preserve">
+    <value>預覽出現時的淡入時間；設為 0 會立即顯示</value>
+  </data>
+  <data name="LabelShowQuickThumbnail" xml:space="preserve">
+    <value>先顯示快速縮圖</value>
+  </data>
+  <data name="DescShowQuickThumbnail" xml:space="preserve">
+    <value>先顯示 Windows 縮圖快取裡的圖片，清晰版解碼完成後再替換</value>
+  </data>
+  <data name="DescTextMaxFileSize" xml:space="preserve">
+    <value>超過此大小的檔案只載入開頭這一段，並標示為「已截斷」</value>
+  </data>
+  <data name="DescTextMaxLines" xml:space="preserve">
+    <value>超過的部分不顯示，並標示為「已截斷」</value>
+  </data>
+  <data name="DescTextFontSize" xml:space="preserve">
+    <value>文字與程式碼預覽使用的字型大小</value>
+  </data>
+  <data name="DescTextFontFamily" xml:space="preserve">
+    <value>文字與程式碼預覽使用的字型；可直接輸入已安裝的字型</value>
+  </data>
+  <data name="DescLanguage" xml:space="preserve">
+    <value>變更後需重新啟動 HoverPeek 才會生效</value>
+  </data>
+  <data name="UnitMilliseconds" xml:space="preserve">
+    <value>ms</value>
+  </data>
+  <data name="UnitPixels" xml:space="preserve">
+    <value>px</value>
+  </data>
+  <data name="UnitMegabytes" xml:space="preserve">
+    <value>MB</value>
+  </data>
+  <data name="UnitLines" xml:space="preserve">
+    <value>行</value>
+  </data>
+  <data name="UnitPoints" xml:space="preserve">
+    <value>pt</value>
+  </data>
+  <data name="IntegerRangeValidation" xml:space="preserve">
+    <value>請輸入 {0}–{1} 之間的整數</value>
+  </data>
+  <data name="ButtonOpenSettingsFolder" xml:space="preserve">
+    <value>開啟設定檔資料夾</value>
+  </data>
+  <data name="ButtonOpenLogFolder" xml:space="preserve">
+    <value>開啟日誌資料夾</value>
+  </data>
+  <data name="AboutAppName" xml:space="preserve">
+    <value>HoverPeek</value>
+  </data>
+  <data name="AboutAuthorValue" xml:space="preserve">
+    <value>kyosora</value>
+  </data>
+  <data name="AboutGitHubValue" xml:space="preserve">
+    <value>github.com/kyosora/HoverPeek</value>
+  </data>
+  <data name="AboutLicenseValue" xml:space="preserve">
+    <value>MIT License</value>
   </data>
 </root>

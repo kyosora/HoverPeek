@@ -308,3 +308,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# AI 委派任務的暫存檔
+.ai/

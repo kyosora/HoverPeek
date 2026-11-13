@@ -1,4 +1,4 @@
-using System.Windows.Automation;
+﻿using System.Windows.Automation;
 
 namespace HoverPeek.Core.FileResolver;
 
@@ -13,7 +13,9 @@ namespace HoverPeek.Core.FileResolver;
 /// </summary>
 public sealed class ExplorerFileResolver
 {
-    // 快取：同一個 Explorer 視窗的資料夾路徑短時間內不會變
+    // 快取：同一個 Explorer 視窗的資料夾路徑短時間內不會變。
+    // 會被多個背景工作同時呼叫，三個欄位要一起讀寫，否則可能拿到 A 視窗的 hwnd 配 B 視窗的路徑。
+    private readonly object _cacheLock = new();
     private int _cachedWindowHandle;
     private string? _cachedFolderPath;
     private DateTime _cachedAt;
@@ -72,20 +74,26 @@ public sealed class ExplorerFileResolver
         var hwnd = current.Current.NativeWindowHandle;
 
         // 快取命中：同一個視窗 + 未過期
-        if (hwnd == _cachedWindowHandle &&
-            _cachedFolderPath != null &&
-            DateTime.UtcNow - _cachedAt < CacheTtl)
+        lock (_cacheLock)
         {
-            return _cachedFolderPath;
+            if (hwnd == _cachedWindowHandle &&
+                _cachedFolderPath != null &&
+                DateTime.UtcNow - _cachedAt < CacheTtl)
+            {
+                return _cachedFolderPath;
+            }
         }
 
         // 快取未命中，重新查詢
         var folderPath = GetFolderPathFromExplorerWindow(current);
         if (folderPath != null)
         {
-            _cachedWindowHandle = hwnd;
-            _cachedFolderPath = folderPath;
-            _cachedAt = DateTime.UtcNow;
+            lock (_cacheLock)
+            {
+                _cachedWindowHandle = hwnd;
+                _cachedFolderPath = folderPath;
+                _cachedAt = DateTime.UtcNow;
+            }
         }
 
         return folderPath;
