@@ -1,4 +1,4 @@
-# HoverPeek
+﻿# HoverPeek
 
 > 🖱️ A lightweight Windows file preview tool — hover over files in Explorer to instantly preview their contents.
 
@@ -37,14 +37,14 @@
   - **30+ file formats** supported
   - **Markdown rendering**: `.md` files displayed as formatted HTML (GitHub Flavored Markdown)
   - **Syntax highlighting**: Auto-colored code for C#, Python, JavaScript, TypeScript, Java, Go, Rust, C/C++, Ruby, PHP, HTML, CSS, SQL, PowerShell, Bash, and more
-  - **Smart encoding detection**: Auto-detects UTF-8, Big5, and system default encoding
-  - Configurable file size and line count limits
+  - **Smart encoding detection**: BOM → strict UTF-8 → Big5 → system ANSI, so Big5 files no longer show as garbled text
+  - Files over the size or line limit load only their beginning and are marked as truncated
 
 ### ⚙️ Full Settings System
 
-- **Hover Behavior** — delay, jitter tolerance, auto-close delay
-- **Preview Window** — size, position (center screen / follow mouse), fade animations
-- **Image** — max preview size, GIF animation toggle
+- **Hover Behavior** — delay (default 400ms), jitter tolerance, auto-close delay (default 400ms)
+- **Preview Window** — maximum size (image previews shrink to the picture), position (beside the pointer by default, or screen center), fade-in
+- **Image** — max preview size (sharp on high-DPI screens), GIF animation, quick Windows-thumbnail placeholder
 - **Text** — max file size, max lines, font size/family, Markdown and syntax highlighting toggles
 - **Video** — auto-play, mute
 - **Archives** — auto-expand file list
@@ -53,8 +53,11 @@
 
 ### 🎯 Highlights
 
-- ✅ **Lightweight** — runs in the background, lives in the system tray
-- ✅ **Instant Preview** — no need to open any application
+- ✅ **Lightweight** — runs in the background, lives in the system tray (previews can be paused from the tray)
+- ✅ **Fast** — decoding starts as soon as the pointer settles, so the preview is usually ready when the hover delay ends; large JPEGs decode 3–13× faster than v1.2
+- ✅ **Multilingual** — 繁體中文, 简体中文, English, 日本語, 한국어; picked from the Windows display language on first launch
+- ✅ **Follows the system theme** — preview and settings windows switch between light and dark automatically
+- ✅ **Errors don't interrupt** — problems are shown inside the preview window and logged to `%AppData%\HoverPeek\logs\`
 - ✅ **Graceful Degradation** — falls back to plain text if Markdown/syntax highlighting fails
 - ✅ **Non-Intrusive** — preview window never steals focus
 - ✅ **Smart Positioning** — auto-adjusts to stay within screen bounds
@@ -79,16 +82,40 @@ git clone https://github.com/kyosora/HoverPeek.git
 cd HoverPeek
 
 # Build in Release mode
-dotnet build src/HoverPeek.App/HoverPeek.App.csproj -c Release
+dotnet build HoverPeek.slnx -c Release
+
+# Run unit tests
+dotnet test HoverPeek.slnx
 
 # Output:
-# src/HoverPeek.App/bin/Release/net8.0-windows/HoverPeek.App.exe
+# src/HoverPeek.App/bin/Release/net8.0-windows/HoverPeek.exe
 ```
+
+Developer tools (not part of the solution, run manually):
+
+```bash
+# Image preview benchmark: v1.2 pipeline vs current, at 100% and 150% scaling
+dotnet run -c Release --project tools/HoverPeek.Bench -- <image paths...>
+
+# Offscreen snapshots of the preview and settings windows (light + dark), nothing is shown on screen
+dotnet run --project tools/HoverPeek.UiSnapshot -- <output dir> <image> <code file> <folder>
+
+# Add UI strings (writes both zh-TW / English resx and Strings.cs)
+python tools/add_strings.py strings.json
+
+# Build another language's resx from a translation JSON (validates keys, {0} placeholders and line breaks first)
+python tools/build_locale_resx.py ja translations/ja.json
+```
+
+### CI & Releases
+
+- Every push / PR: GitHub Actions builds and runs the unit tests (`.github/workflows/ci.yml`)
+- New release: bump `<Version>` in `HoverPeek.App.csproj`, write `.github/release-notes/v<version>.md`, then `git tag v<version> && git push origin v<version>`; `release.yml` tests, packages the win-x64 zip and creates the GitHub Release
 
 ## 🚀 Usage
 
-1. **Launch** — Run `HoverPeek.App.exe`. It minimizes to the system tray.
-2. **Preview** — Hover over a file in Explorer for ~500ms (configurable). A preview window appears automatically.
+1. **Launch** — Run `HoverPeek.exe`. It minimizes to the system tray.
+2. **Preview** — Hover over a file in Explorer for ~400ms (configurable). A preview window appears automatically.
 3. **Settings** — Right-click the tray icon → "Settings". Adjust and save.
 4. **Quit** — Right-click the tray icon → "Exit HoverPeek".
 
@@ -134,9 +161,10 @@ HoverPeek/
 ### How It Works
 
 1. **Global Mouse Hook** — Registers a low-level mouse hook via `SetWindowsHookEx`. Does not block mouse events. Overhead < 1ms.
-2. **Hover Detection** — Jitter tolerance (< 8px) prevents accidental triggers. Cancellable via `CancellationTokenSource`. Locks preview to avoid re-triggering on mouse movement.
+2. **Hover Detection & Preview Pipeline** — Jitter tolerance (< 8px) prevents accidental triggers. A preview session starts 60ms after the pointer settles and resolves/decodes the file in the background. Each file is decoded once and kept in an LRU cache (24 items / 160MB, invalidated when the file changes). While decoding, the Windows thumbnail cache is shown first. Moving from one file to another swaps the content without the window flickering.
 3. **File Path Resolution** — Primary: UI Automation API (supports all Explorer view modes). Fallback: Shell COM interface. Silent failure on errors.
-4. **Preview Window** — Never steals focus (`ShowActivated=False` + `WS_EX_NOACTIVATE` + `WS_EX_TOOLWINDOW`). Smart positioning avoids screen overflow. Configurable fade animations.
+4. **Image Decoding** — Skia decodes straight to the target size (JPEG uses DCT k/8 scaling) and hands BGRA pixels to WPF without a PNG round-trip. EXIF orientation is applied. Formats Skia can't read (AVIF, HEIC…) fall back to the installed Windows WIC codecs.
+5. **Preview Window** — Never steals focus (`ShowActivated=False` + `WS_EX_NOACTIVATE` + `WS_EX_TOOLWINDOW`). PerMonitorV2 DPI awareness keeps placement correct and images pixel-sharp across monitors. Placed beside the pointer (flipping sides, never covering it) or centered. Native Win11 rounded corners and shadow via DWM (no transparent window, so WebView2 renders). Markdown previews run with scripts and navigation disabled.
 
 ## 🛠️ Configuration
 
@@ -144,20 +172,21 @@ Settings are stored at: `%AppData%\HoverPeek\settings.json`
 
 ```json
 {
-  "HoverDelayMs": 500,
+  "SettingsVersion": 2,
+  "HoverDelayMs": 400,
   "JitterTolerancePx": 8,
-  "AutoCloseDelayMs": 600,
+  "AutoCloseDelayMs": 400,
   "WindowWidth": 800,
   "WindowHeight": 600,
-  "CenterWindow": true,
-  "FadeInDurationMs": 150,
-  "FadeOutDurationMs": 100,
+  "CenterWindow": false,
+  "FadeInDurationMs": 60,
   "ImageMaxDimension": 800,
   "EnableGifAnimation": true,
+  "ShowQuickThumbnail": true,
   "TextMaxFileSizeMB": 1,
   "TextMaxLines": 1000,
-  "TextFontSize": 11,
-  "TextFontFamily": "Consolas",
+  "TextFontSize": 12,
+  "TextFontFamily": "Cascadia Mono, Consolas",
   "EnableMarkdownRendering": true,
   "EnableSyntaxHighlighting": true,
   "VideoAutoPlay": true,
@@ -166,6 +195,8 @@ Settings are stored at: `%AppData%\HoverPeek\settings.json`
   "StartWithWindows": false
 }
 ```
+
+Settings files from v1.2 and earlier are upgraded on first launch: untouched old defaults (500ms hover, centered window, 150ms fade…) switch to the new defaults, customised values are kept, and out-of-range values are clamped.
 
 ## 🤝 Contributing
 
@@ -180,11 +211,11 @@ Issues and Pull Requests are welcome!
 ### Roadmap
 
 - [ ] PDF preview support
-- [ ] Multi-monitor improvements
-- [ ] Custom CSS themes for Markdown
+- [x] Multi-monitor improvements (v1.3: PerMonitorV2)
+- [x] Markdown follows light / dark theme (v1.3)
 - [ ] More syntax highlighting languages
-- [ ] Thumbnail caching
-- [ ] Performance monitoring & optimization
+- [x] Thumbnail caching (v1.3: LRU cache + Windows thumbnail cache)
+- [x] Performance optimization (v1.3: speculative preloading, scaled decoding)
 
 ## 📄 License
 
