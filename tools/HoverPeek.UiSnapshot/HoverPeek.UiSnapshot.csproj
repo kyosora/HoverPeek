@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 離屏截圖：把預覽視窗與設定視窗畫成 PNG（不顯示在螢幕上），檢查版面與深淺主題。不在 solution 裡，手動執行。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\HoverPeek.Core\HoverPeek.Core.csproj" />
+    <ProjectReference Include="..\..\src\HoverPeek.UI\HoverPeek.UI.csproj" />
+    <ProjectReference Include="..\..\src\HoverPeek.App\HoverPeek.App.csproj" />
+  </ItemGroup>
+</Project>
