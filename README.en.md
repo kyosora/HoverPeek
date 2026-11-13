@@ -55,7 +55,7 @@
 
 - ✅ **Lightweight** — runs in the background, lives in the system tray (previews can be paused from the tray)
 - ✅ **Fast** — decoding starts as soon as the pointer settles, so the preview is usually ready when the hover delay ends; large JPEGs decode 3–13× faster than v1.2
-- ✅ **Multilingual** — 繁體中文, 简体中文, English, 日本語, 한국어; picked from the Windows display language on first launch
+- ✅ **Multilingual** — 繁體中文, 简体中文, English, 日本語, 한국어, Русский; picked from the Windows display language on first launch
 - ✅ **Follows the system theme** — preview and settings windows switch between light and dark automatically
 - ✅ **Errors don't interrupt** — problems are shown inside the preview window and logged to `%AppData%\HoverPeek\logs\`
 - ✅ **Graceful Degradation** — falls back to plain text if Markdown/syntax highlighting fails

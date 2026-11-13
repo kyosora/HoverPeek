@@ -16,6 +16,8 @@ public sealed class SupportedLanguagesTests
     [InlineData("zh-Hans", "zh-CN")]
     [InlineData("ja-JP", "ja")]
     [InlineData("ko-KR", "ko")]
+    [InlineData("ru-RU", "ru")]
+    [InlineData("uk-UA", "en")] // 烏克蘭文不支援，不該被當成俄文
     [InlineData("en-US", "en")]
     [InlineData("en-GB", "en")]
     [InlineData("fr-FR", "en")] // 不支援的語言退回英文
@@ -37,6 +39,7 @@ public sealed class SupportedLanguagesTests
     [InlineData("zh-CN")]
     [InlineData("ja")]
     [InlineData("ko")]
+    [InlineData("ru")]
     public void Normalize_KeepsNewlySupportedLanguages(string code)
     {
         var settings = AppSettings.Default.Clone();

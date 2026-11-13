@@ -20,6 +20,7 @@ public static class SupportedLanguages
         new Language("en", "English"),
         new Language("ja", "日本語"),
         new Language("ko", "한국어"),
+        new Language("ru", "Русский"),
     };
 
     public static bool IsSupported(string? code) =>
