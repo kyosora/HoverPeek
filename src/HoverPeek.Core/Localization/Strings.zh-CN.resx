@@ -537,4 +537,10 @@
   <data name="AboutLicenseValue" xml:space="preserve">
     <value>MIT License</value>
   </data>
+  <data name="TruncatedLongLines" xml:space="preserve">
+    <value>... (过长的行只显示前 {0} 个字符)</value>
+  </data>
+  <data name="TruncatedBySize" xml:space="preserve">
+    <value>... (只加载了开头 {0}，文件共 {1})</value>
+  </data>
 </root>

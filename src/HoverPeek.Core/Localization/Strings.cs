@@ -194,4 +194,8 @@ public static class Strings
     public static string AboutAuthorValue => Get(nameof(AboutAuthorValue));
     public static string AboutGitHubValue => Get(nameof(AboutGitHubValue));
     public static string AboutLicenseValue => Get(nameof(AboutLicenseValue));
+
+    // Added by tools/add_strings.py
+    public static string TruncatedLongLines => Get(nameof(TruncatedLongLines));
+    public static string TruncatedBySize => Get(nameof(TruncatedBySize));
 }

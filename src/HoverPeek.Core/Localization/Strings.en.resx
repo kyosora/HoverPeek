@@ -573,4 +573,10 @@ This will clear all custom settings.</value>
   <data name="AboutLicenseValue" xml:space="preserve">
     <value>MIT License</value>
   </data>
+  <data name="TruncatedLongLines" xml:space="preserve">
+    <value>... (Long lines are cut to the first {0} characters)</value>
+  </data>
+  <data name="TruncatedBySize" xml:space="preserve">
+    <value>... (Only the first {0} of {1} was loaded)</value>
+  </data>
 </root>

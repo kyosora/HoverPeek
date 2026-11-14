@@ -20,7 +20,7 @@ public sealed record PreviewResult
     /// <summary>靜態圖：已解碼的像素，UI 直接顯示。</summary>
     public DecodedImage? Image { get; init; }
 
-    /// <summary>GIF 動畫：保留原始位元組交給 WpfAnimatedGif。</summary>
+    /// <summary>GIF 動畫：原始位元組，UI 用 GifPlayer 逐格串流播放（Image 是第一格）。</summary>
     public byte[]? AnimatedGifData { get; init; }
 
     public int ImageWidth { get; init; }

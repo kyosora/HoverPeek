@@ -34,6 +34,7 @@ public sealed partial class PreviewWindow : Window
     private PreviewAnchor _anchor;
     private PreviewResult? _current;
     private bool _isLoading;
+    private string? _lastRenderedPath;
     private IntPtr _hwnd;
 
     public PreviewWindow(IPreviewHost host)
@@ -46,6 +47,9 @@ public sealed partial class PreviewWindow : Window
         // 先建好 HWND，第一次預覽時不必等建立視窗
         _hwnd = new WindowInteropHelper(this).EnsureHandle();
     }
+
+    /// <summary>最後一次開始繪製的路徑。可在任何執行緒讀取（UI 卡住時看門狗用來記錄元兇）。</summary>
+    public string? LastRenderedPath => Volatile.Read(ref _lastRenderedPath);
 
     /// <summary>目前顯示中的檔案路徑；資料夾內點進去的檔案也算。</summary>
     public string? ShownPath => IsVisible ? _current?.SourcePath : null;
@@ -78,6 +82,7 @@ public sealed partial class PreviewWindow : Window
     {
         _anchor = anchor;
         _isLoading = true;
+        Volatile.Write(ref _lastRenderedPath, path);
         _current = new PreviewResult { Kind = PreviewKind.Unsupported, SourcePath = path };
         ResetContent();
         SetHeader(path, Glyphs.Loading, string.Empty);

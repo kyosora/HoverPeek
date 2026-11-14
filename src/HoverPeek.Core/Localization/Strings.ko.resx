@@ -537,4 +537,10 @@
   <data name="AboutLicenseValue" xml:space="preserve">
     <value>MIT License</value>
   </data>
+  <data name="TruncatedLongLines" xml:space="preserve">
+    <value>... (긴 줄은 처음 {0}자만 표시)</value>
+  </data>
+  <data name="TruncatedBySize" xml:space="preserve">
+    <value>... (전체 {1} 중 처음 {0}만 불러옴)</value>
+  </data>
 </root>

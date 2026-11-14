@@ -1,4 +1,4 @@
-using HoverPeek.Core.Localization;
+﻿using HoverPeek.Core.Localization;
 using HoverPeek.Core.Text;
 using Markdig;
 
@@ -38,6 +38,12 @@ public sealed class TextPreviewProvider : IPreviewProvider
         ".md", ".markdown",
     };
 
+    /// <summary>
+    /// 每行最多顯示的字元數。壓縮過的 JSON／JS 常整份只有一行（實例：1MB 一行），
+    /// AvalonEdit 與 TextBox 排版這種行會在 UI 執行緒卡上數十秒，讓整個程式被判定沒有回應。
+    /// </summary>
+    internal const int MaxLineChars = 2000;
+
     // Markdig 管線建一次就好，執行緒安全
     private static readonly MarkdownPipeline MarkdownPipeline =
         new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
@@ -65,10 +71,16 @@ public sealed class TextPreviewProvider : IPreviewProvider
 
         var decoded = TextEncodingDetector.Decode(buffer, truncated: truncatedBySize);
         var (content, truncatedByLines) = LimitLines(decoded.Text, request.TextMaxLines);
-        var truncated = truncatedBySize || truncatedByLines;
 
         var extension = Path.GetExtension(path);
         var isMarkdown = request.RenderMarkdown && MarkdownExtensions.Contains(extension);
+
+        // Markdown 交給 WebView2 排版，長行沒有問題，而且截斷會破壞語法；其他一律限制行長
+        var truncatedByLineLength = false;
+        if (!isMarkdown)
+            (content, truncatedByLineLength) = LimitLineLength(content, MaxLineChars);
+
+        var truncated = truncatedBySize || truncatedByLines || truncatedByLineLength;
         string? html = null;
         if (isMarkdown)
         {
@@ -84,7 +96,9 @@ public sealed class TextPreviewProvider : IPreviewProvider
         }
 
         if (truncated)
-            content += "\n\n" + Strings.Format("TruncatedMessage", request.TextMaxLines, CountLinesApprox(decoded.Text));
+            content += "\n\n" + DescribeTruncation(
+                truncatedByLines, truncatedByLineLength, truncatedBySize,
+                request.TextMaxLines, CountLinesApprox(decoded.Text), byteLimit, fileSize);
 
         return new PreviewResult
         {
@@ -116,6 +130,46 @@ public sealed class TextPreviewProvider : IPreviewProvider
 
         return index + 1 >= text.Length ? (text, false) : (text[..index], true);
     }
+
+    /// <summary>超過 maxChars 的行截斷並加上「 …」；沒有長行時原字串原樣回傳，不配置新字串。</summary>
+    internal static (string Text, bool Truncated) LimitLineLength(string text, int maxChars)
+    {
+        if (maxChars <= 0 || text.Length <= maxChars)
+            return (text, false);
+
+        var lines = text.Split('\n');
+        var cut = false;
+        for (var i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].Length > maxChars)
+            {
+                lines[i] = lines[i][..maxChars] + " …";
+                cut = true;
+            }
+        }
+
+        return cut ? (string.Join('\n', lines), true) : (text, false);
+    }
+
+    private static string DescribeTruncation(
+        bool byLines, bool byLineLength, bool bySize, int maxLines, int totalLines, long loadedBytes, long fileSize)
+    {
+        var notes = new List<string>(3);
+        if (byLines)
+            notes.Add(Strings.Format("TruncatedMessage", maxLines, totalLines));
+        if (byLineLength)
+            notes.Add(Strings.Format("TruncatedLongLines", MaxLineChars));
+        if (bySize)
+            notes.Add(Strings.Format("TruncatedBySize", FormatSize(loadedBytes), FormatSize(fileSize)));
+        return string.Join("\n", notes);
+    }
+
+    private static string FormatSize(long bytes) => bytes switch
+    {
+        >= 1024 * 1024 => $"{bytes / (1024.0 * 1024):0.#} MB",
+        >= 1024 => $"{bytes / 1024.0:0.#} KB",
+        _ => $"{bytes} B",
+    };
 
     private static int CountLinesApprox(string text) => text.AsSpan().Count('\n') + 1;
 

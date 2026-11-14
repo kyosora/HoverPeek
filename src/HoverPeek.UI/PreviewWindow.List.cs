@@ -36,6 +36,7 @@ public sealed partial class PreviewWindow
     private ListEntryItem? _pendingInnerItem;
     private string? _innerImageEntry;
     private DispatcherTimer? _innerImageTimer;
+    private GifPlayer? _innerGifPlayer;
 
     private void ResetListState()
     {
@@ -88,7 +89,8 @@ public sealed partial class PreviewWindow
 
     private void ClearInnerImage()
     {
-        WpfAnimatedGif.ImageBehavior.SetAnimatedSource(InnerImageView, null);
+        _innerGifPlayer?.Dispose();
+        _innerGifPlayer = null;
         InnerImageView.Source = null;
         InnerImageColumn.Width = new GridLength(0);
         _innerImageEntry = null;
@@ -154,19 +156,14 @@ public sealed partial class PreviewWindow
         if (!ReferenceEquals(_pendingInnerItem, item) || _listPath != listPath || result.Kind != PreviewKind.Image)
             return;
 
-        if (result.AnimatedGifData != null)
-        {
-            WpfAnimatedGif.ImageBehavior.SetAnimatedSource(InnerImageView, LoadGif(result.AnimatedGifData));
-        }
-        else if (result.Image != null)
-        {
-            WpfAnimatedGif.ImageBehavior.SetAnimatedSource(InnerImageView, null);
-            InnerImageView.Source = ToBitmapSource(result.Image);
-        }
-        else
-        {
+        if (result.Image == null)
             return;
-        }
+
+        _innerGifPlayer?.Dispose();
+        InnerImageView.Source = ToBitmapSource(result.Image);
+        _innerGifPlayer = result.AnimatedGifData == null
+            ? null
+            : GifPlayer.Start(result.AnimatedGifData, Math.Max(result.Image.Width, result.Image.Height), _anchor.DpiScale, InnerImageView);
 
         _innerImageEntry = item.Entry.FullPath;
         InnerImageColumn.Width = new GridLength(1, GridUnitType.Star);

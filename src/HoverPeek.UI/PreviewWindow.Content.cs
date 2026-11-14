@@ -49,12 +49,13 @@ public sealed partial class PreviewWindow
 {
     private static readonly Size MessageSize = new(440, 220);
 
+    private GifPlayer? _gifPlayer;
+
     private void ResetContent()
     {
         ImageHost.Visibility = Visibility.Collapsed;
         ListHost.Visibility = Visibility.Collapsed;
         VideoPlayer.Visibility = Visibility.Collapsed;
-        PlainTextView.Visibility = Visibility.Collapsed;
         CodeView.Visibility = Visibility.Collapsed;
         MarkdownView.Visibility = Visibility.Collapsed;
         MessageHost.Visibility = Visibility.Collapsed;
@@ -62,11 +63,11 @@ public sealed partial class PreviewWindow
         LowResBadge.Visibility = Visibility.Collapsed;
         TruncatedBadge.Visibility = Visibility.Collapsed;
 
-        WpfAnimatedGif.ImageBehavior.SetAnimatedSource(ImageView, null);
+        _gifPlayer?.Dispose();
+        _gifPlayer = null;
         ImageView.Source = null;
         ClearInnerImage();
         PosterView.Source = null;
-        PlainTextView.Clear();
         CodeView.Text = string.Empty;
         FileListView.ItemsSource = null;
         MessageDetail.Clear();
@@ -79,6 +80,7 @@ public sealed partial class PreviewWindow
     private Size RenderContent(PreviewResult result)
     {
         var path = result.SourcePath ?? string.Empty;
+        Volatile.Write(ref _lastRenderedPath, path);
         switch (result.Kind)
         {
             case PreviewKind.Image:
@@ -106,18 +108,17 @@ public sealed partial class PreviewWindow
     private Size RenderImage(PreviewResult result, string path)
     {
         Size natural;
-        if (result.AnimatedGifData != null)
+        if (result.Image != null)
         {
-            var gif = LoadGif(result.AnimatedGifData);
-            WpfAnimatedGif.ImageBehavior.SetAnimatedSource(ImageView, gif);
-            natural = new Size(gif.PixelWidth, gif.PixelHeight);
-        }
-        else if (result.Image != null)
-        {
-            WpfAnimatedGif.ImageBehavior.SetAnimatedSource(ImageView, null);
             var bitmap = ToBitmapSource(result.Image);
             ImageView.Source = bitmap;
             natural = new Size(bitmap.Width, bitmap.Height); // DIP
+
+            // GIF：先顯示第一格，播放器在背景準備好後接手；不在 UI 執行緒一次解完所有影格
+            _gifPlayer?.Dispose();
+            _gifPlayer = result.AnimatedGifData == null
+                ? null
+                : GifPlayer.Start(result.AnimatedGifData, Math.Max(result.Image.Width, result.Image.Height), _anchor.DpiScale, ImageView);
         }
         else
         {
@@ -188,17 +189,18 @@ public sealed partial class PreviewWindow
             return;
         }
 
+        // 純文字也用 AvalonEdit（不上色）：它只排版看得到的行。WPF TextBox 會整份排版，
+        // 實測 1000 行 × 1900 字元要 551ms，AvalonEdit 142ms
         SetHeader(path, Glyphs.Document, Formatting.Join(result.TextEncoding, size));
-        PlainTextView.Text = result.TextContent ?? string.Empty;
-        PlainTextView.ScrollToHome();
-        PlainTextView.Visibility = Visibility.Visible;
+        CodeView.SyntaxHighlighting = null;
+        CodeView.Text = result.TextContent ?? string.Empty;
+        CodeView.ScrollToHome();
+        CodeView.Visibility = Visibility.Visible;
     }
 
     private void ApplyTextSettings()
     {
         var family = new FontFamily(_settings.TextFontFamily);
-        PlainTextView.FontFamily = family;
-        PlainTextView.FontSize = _settings.TextFontSize;
         CodeView.FontFamily = family;
         CodeView.FontSize = _settings.TextFontSize;
     }
@@ -262,14 +264,4 @@ public sealed partial class PreviewWindow
         return bitmap;
     }
 
-    private static BitmapImage LoadGif(byte[] data)
-    {
-        var gif = new BitmapImage();
-        gif.BeginInit();
-        gif.CacheOption = BitmapCacheOption.OnLoad;
-        gif.StreamSource = new MemoryStream(data, writable: false);
-        gif.EndInit();
-        gif.Freeze();
-        return gif;
-    }
 }

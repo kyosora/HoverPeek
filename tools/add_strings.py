@@ -1,7 +1,11 @@
 """把新字串同時加進 Strings.resx（繁中）、Strings.en.resx（英文）與 Strings.cs。
 
 用法：python tools/add_strings.py strings.json
-strings.json 格式：{"Key": ["繁中", "English"], ...}
+strings.json 格式（兩種擇一）：
+  {"Key": ["繁中", "English"], ...}
+  {"Key": {"zh-TW": "繁中", "en": "English", "ja": "日本語", ...}, ...}
+第二種格式會一併寫入其他語言的 Strings.{語言}.resx。新增 key 時必須涵蓋所有已存在的
+語言檔，否則該語言會缺字（SupportedLanguagesTests 會抓到）。
 已存在的 key 會更新內容，不會重複新增。
 """
 import io, json, re, sys
@@ -33,11 +37,16 @@ def upsert_cs(path, keys):
 
 def main():
     data = json.load(io.open(sys.argv[1], encoding="utf-8"))
-    for key, (zh, en) in data.items():
+    for key, value in data.items():
         if not re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", key):
             raise SystemExit(f"不合法的 key：{key!r}")
-        upsert_resx(ROOT + "Strings.resx", key, zh)
-        upsert_resx(ROOT + "Strings.en.resx", key, en)
+        texts = value if isinstance(value, dict) else {"zh-TW": value[0], "en": value[1]}
+        if "zh-TW" not in texts or "en" not in texts:
+            raise SystemExit(f"{key}：至少要有 zh-TW 與 en")
+        for code, text in texts.items():
+            # zh-TW 是 neutral 資源（Strings.resx），其他語言各自一個檔
+            target = "Strings.resx" if code == "zh-TW" else f"Strings.{code}.resx"
+            upsert_resx(ROOT + target, key, text)
     upsert_cs(ROOT + "Strings.cs", list(data))
     print(f"已處理 {len(data)} 個字串")
 

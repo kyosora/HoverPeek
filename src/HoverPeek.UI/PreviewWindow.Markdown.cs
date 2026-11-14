@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Media;
 using HoverPeek.Core.Diagnostics;
 using HoverPeek.UI.Themes;
+using ICSharpCode.AvalonEdit.Highlighting;
 using Microsoft.Web.WebView2.Core;
 
 namespace HoverPeek.UI;
@@ -84,15 +85,18 @@ public sealed partial class PreviewWindow
 
         _allowNextNavigation = true;
         MarkdownView.NavigateToString(BuildMarkdownPage(bodyHtml, ThemeManager.IsDark));
-        PlainTextView.Visibility = Visibility.Collapsed;
+        CodeView.Visibility = Visibility.Collapsed;
         MarkdownView.Visibility = Visibility.Visible;
     }
 
     private void ShowMarkdownAsPlainText()
     {
+        // 用 AvalonEdit 顯示原文：WPF TextBox 遇到大檔會整份排版而卡住 UI
         MarkdownView.Visibility = Visibility.Collapsed;
-        PlainTextView.Text = _current?.TextContent ?? string.Empty;
-        PlainTextView.Visibility = Visibility.Visible;
+        CodeView.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("MarkDown");
+        CodeView.Text = _current?.TextContent ?? string.Empty;
+        CodeView.ScrollToHome();
+        CodeView.Visibility = Visibility.Visible;
     }
 
     private static string BuildMarkdownPage(string bodyHtml, bool dark)

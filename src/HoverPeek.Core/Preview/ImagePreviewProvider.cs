@@ -56,7 +56,7 @@ public sealed class ImagePreviewProvider : IPreviewProvider
             throw new InvalidOperationException(Strings.Format("FileEmpty", request.Path));
 
         if (request.AnimateGif && SkiaImageDecoder.IsGif(bytes))
-            return ToGifResult(bytes, request.Path, bytes.Length);
+            return ToGifResult(bytes, request, bytes.Length);
 
         var image = SkiaImageDecoder.TryDecode(bytes, request.MaxImagePixels, request.DpiScale)
                     ?? throw new NotSupportedException(Strings.Format("CannotDecodeImage", request.Path, bytes.Length));
@@ -77,24 +77,28 @@ public sealed class ImagePreviewProvider : IPreviewProvider
         {
             var bytes = new byte[fileSize];
             stream.ReadExactly(bytes);
-            return ToGifResult(bytes, request.Path, fileSize);
+            return ToGifResult(bytes, request, fileSize);
         }
 
         var image = SkiaImageDecoder.TryDecode(stream, request.MaxImagePixels, request.DpiScale);
         return image == null ? null : ToResult(image, image.Format ?? "?", request.Path, fileSize);
     }
 
-    private static PreviewResult ToGifResult(byte[] bytes, string path, long fileSize)
+    /// <summary>
+    /// GIF：同時附上第一格的靜態圖（背景解好，預覽一出現就有畫面）與原始 bytes（給 UI 串流播放動畫）。
+    /// </summary>
+    private static PreviewResult ToGifResult(byte[] bytes, PreviewRequest request, long fileSize)
     {
-        using var codec = SKCodec.Create(new MemoryStream(bytes, writable: false));
+        var firstFrame = SkiaImageDecoder.TryDecode(bytes, request.MaxImagePixels, request.DpiScale);
         return new PreviewResult
         {
             Kind = PreviewKind.Image,
+            Image = firstFrame,
             AnimatedGifData = bytes,
-            ImageWidth = codec?.Info.Width ?? 0,
-            ImageHeight = codec?.Info.Height ?? 0,
+            ImageWidth = firstFrame?.SourceWidth ?? 0,
+            ImageHeight = firstFrame?.SourceHeight ?? 0,
             ImageFormat = "GIF",
-            SourcePath = path,
+            SourcePath = request.Path,
             FileSize = fileSize,
         };
     }
