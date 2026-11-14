@@ -100,6 +100,9 @@ dotnet run -c Release --project tools/HoverPeek.Bench -- <image paths...>
 # Offscreen snapshots of the preview and settings windows (light + dark), nothing is shown on screen
 dotnet run --project tools/HoverPeek.UiSnapshot -- <output dir> <image> <code file> <folder>
 
+# Stress test: UI-thread time per file, to find files that freeze the preview
+dotnet run -c Release --project tools/HoverPeek.StressRender -- <files...>
+
 # Add UI strings (writes both zh-TW / English resx and Strings.cs)
 python tools/add_strings.py strings.json
 

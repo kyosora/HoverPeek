@@ -100,6 +100,9 @@ dotnet run -c Release --project tools/HoverPeek.Bench -- <image paths...>
 # Снимки окон предпросмотра и настроек вне экрана (светлая + тёмная темы), на экране ничего не отображается
 dotnet run --project tools/HoverPeek.UiSnapshot -- <output dir> <image> <code file> <folder>
 
+# Нагрузочный тест: время UI-потока для каждого файла, чтобы найти файлы, вызывающие зависание
+dotnet run -c Release --project tools/HoverPeek.StressRender -- <files...>
+
 # Добавление строк интерфейса (записывает resx для zh-TW / English и Strings.cs)
 python tools/add_strings.py strings.json
 

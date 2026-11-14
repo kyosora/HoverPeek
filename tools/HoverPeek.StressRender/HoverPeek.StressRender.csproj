@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 預覽壓力測試：量每種格式在 UI 執行緒上的耗時，找會讓視窗卡死的檔案。不在 solution 裡，手動執行。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <VlcWindowsX86Enabled>false</VlcWindowsX86Enabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\HoverPeek.Core\HoverPeek.Core.csproj" />
+    <ProjectReference Include="..\..\src\HoverPeek.UI\HoverPeek.UI.csproj" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21" />
+  </ItemGroup>
+</Project>

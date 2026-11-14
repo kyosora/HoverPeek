@@ -128,6 +128,9 @@ dotnet run -c Release --project tools/HoverPeek.Bench -- <圖片路徑...>
 # 離屏截圖：把預覽視窗與設定視窗畫成 PNG（淺色＋深色），不會顯示在螢幕上
 dotnet run --project tools/HoverPeek.UiSnapshot -- <輸出資料夾> <圖片檔> <程式碼檔> <資料夾>
 
+# 壓力測試：量每個檔案在 UI 執行緒上的耗時，找出會讓預覽卡死的檔案
+dotnet run -c Release --project tools/HoverPeek.StressRender -- <檔案...>
+
 # 新增介面字串（同時寫入繁中／英文 resx 與 Strings.cs）
 python tools/add_strings.py strings.json
 
