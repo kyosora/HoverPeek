@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\HoverPeek.Core\HoverPeek.Core.csproj" />
     <ProjectReference Include="..\..\src\HoverPeek.UI\HoverPeek.UI.csproj" />
+    <ProjectReference Include="..\..\src\HoverPeek.App\HoverPeek.App.csproj" />
   </ItemGroup>
 
 </Project>

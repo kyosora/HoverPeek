@@ -24,6 +24,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="HoverPeek.Core.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\HoverPeek.Core\HoverPeek.Core.csproj" />
     <ProjectReference Include="..\HoverPeek.UI\HoverPeek.UI.csproj" />
   </ItemGroup>

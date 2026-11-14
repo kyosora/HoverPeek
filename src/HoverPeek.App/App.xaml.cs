@@ -31,6 +31,8 @@ public partial class App : System.Windows.Application, IPreviewHost
 
     private SettingsService _settingsService = null!;
     private GlobalMouseHook? _mouseHook;
+    private MouseHookThread? _hookThread;
+    private UiWatchdog? _watchdog;
     private HoverDetector? _hoverDetector;
     private ShellThumbnailProvider? _shell;
     private ArchivePreviewProvider _archiveProvider = null!;
@@ -95,7 +97,9 @@ public partial class App : System.Windows.Application, IPreviewHost
 
         try
         {
-            _mouseHook.Install();
+            // hook 放在專屬執行緒：UI 卡住時系統滑鼠不會跟著頓，Windows 也不會因逾時移除 hook
+            _hookThread = new MouseHookThread(_mouseHook);
+            _hookThread.Start();
         }
         catch (Exception ex)
         {
@@ -105,6 +109,8 @@ public partial class App : System.Windows.Application, IPreviewHost
             Shutdown();
             return;
         }
+
+        _watchdog = new UiWatchdog(Dispatcher, () => _previewWindow.LastRenderedPath, TimeSpan.FromSeconds(3));
 
         // 閒下來再暖機 VLC，不拖慢啟動
         Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () => _ = PreviewWindow.WarmUpVideoAsync());
@@ -222,7 +228,8 @@ public partial class App : System.Windows.Application, IPreviewHost
                     return; // 還在同一個檔案上
 
                 // 滑到另一個可預覽的檔案：先不關，等懸停直接換內容，避免「消失→出現」的閃爍
-                if (under != null && _pipeline.SelectProvider(under) != null)
+                // SelectProvider 會查 Directory.Exists，網路磁碟離線時可能卡很久，不能在 UI 執行緒做
+                if (under != null && await Task.Run(() => _pipeline.SelectProvider(under), ct) != null)
                 {
                     await Task.Delay(InsideWindowRecheck, ct);
                     continue;
@@ -258,8 +265,9 @@ public partial class App : System.Windows.Application, IPreviewHost
 
     // ---- IPreviewHost：預覽視窗內的資料夾瀏覽、壓縮檔內圖片 ----
 
+    // 整段丟到背景：選 provider、建快取 key 都會碰檔案系統，網路磁碟可能卡住 UI
     Task<PreviewResult> IPreviewHost.PreviewPathAsync(string path, double dpiScale) =>
-        _pipeline.PreviewPathAsync(path, dpiScale);
+        Task.Run(() => _pipeline.PreviewPathAsync(path, dpiScale));
 
     Task<PreviewResult> IPreviewHost.PreviewArchiveEntryAsync(string archivePath, string entryPath, double dpiScale)
     {
@@ -303,8 +311,9 @@ public partial class App : System.Windows.Application, IPreviewHost
     protected override void OnExit(ExitEventArgs e)
     {
         _session?.Cancel();
+        _watchdog?.Dispose();
         _hoverDetector?.Dispose();
-        _mouseHook?.Dispose();
+        _hookThread?.Dispose();
         _tray?.Dispose();
         _pipeline?.Dispose();
         _shell?.Dispose();
