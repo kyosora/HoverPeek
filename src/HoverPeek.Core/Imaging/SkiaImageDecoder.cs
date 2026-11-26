@@ -88,7 +88,9 @@ public static class SkiaImageDecoder
     /// JPEG 只支援 k/8 縮放，GetScaledDimensions 會回傳「最接近」的級距，可能比目標小
     /// （例如 6000px 縮到 800px，最接近的 1/8 = 750px）。小於目標就往上一級找，
     /// 而不是直接退回全尺寸（實測 8MB JPEG：全尺寸 112ms → 2/8 級距 67ms）。
-    /// 不支援縮放解碼的格式（PNG、WebP…）每一級都回傳原尺寸，自然落到全尺寸。
+    /// WebP 依比例回傳任意尺寸，同樣會選到某一級，由 libwebp 在解碼時縮放。
+    /// 直接解到目標尺寸、省掉後面的 Resize，實測量不出穩定差距（2026-11-26），所以維持一套邏輯。
+    /// 不支援縮放解碼的格式（PNG…）每一級都回傳原尺寸，自然落到全尺寸。
     /// </summary>
     internal static SKSizeI ChooseDecodeSize(SKCodec codec, int targetW, int targetH)
     {

@@ -34,6 +34,20 @@ public sealed class SkiaImageDecoderTests
         Assert.Equal(new SKSizeI(1500, 1000), size);
     }
 
+    [Theory]
+    [InlineData(SKEncodedImageFormat.Webp, 1000, 750)] // 依比例縮：1/8 = 500 太小，2/8 = 1000
+    [InlineData(SKEncodedImageFormat.Png, 4000, 3000)] // PNG 不能縮放解碼，只能全尺寸
+    public void ChooseDecodeSize_NonJpegFormats_FollowCodecScaledDimensions(
+        SKEncodedImageFormat format, int expectedW, int expectedH)
+    {
+        var bytes = EncodeSolidImage(4000, 3000, SKColors.Teal, format);
+        using var codec = SKCodec.Create(new MemoryStream(bytes));
+
+        var size = SkiaImageDecoder.ChooseDecodeSize(codec, 800, 600);
+
+        Assert.Equal(new SKSizeI(expectedW, expectedH), size);
+    }
+
     [Fact]
     public void TryDecode_DpiScale_SetsPhysicalDpi()
     {
